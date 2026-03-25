@@ -105,9 +105,7 @@ class Settings(BaseSettings):
     SMTP_FROM_NAME: str = "FastAPI App"
 
     class Config:
-        """配置类"""
-
-        env_file = "../../.env"
+        env_file = str(Path(__file__).parent.parent.parent / ".env")
         case_sensitive = True
 
 

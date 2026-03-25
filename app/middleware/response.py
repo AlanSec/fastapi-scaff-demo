@@ -15,6 +15,8 @@ class ResponseWrapperMiddleware(BaseHTTPMiddleware):
         "/redoc",
         "/openapi.json",
         "/media",
+        "/api/v1/token",      # OAuth2 token 端点 - 必须返回标准格式
+        "/api/v1/refresh",    # 刷新 token 端点
     }
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:

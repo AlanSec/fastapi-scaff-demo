@@ -7,10 +7,12 @@ from starlette.exceptions import HTTPException
 from app.api.exception import CustomException
 from app.middleware.cors import Cors
 from app.middleware.exception import ExceptionHandler
+from app.middleware.request_logger import RequestLoggerMiddleware
 from app.middleware.response import ResponseWrapperMiddleware
 
 
 def register_middlewares(app: FastAPI):
+    app.add_middleware(RequestLoggerMiddleware)
     app.add_middleware(ResponseWrapperMiddleware)
 
     app.add_middleware(

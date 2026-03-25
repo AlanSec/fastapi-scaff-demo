@@ -159,35 +159,37 @@ async def refresh_access_token(refresh_token: str, db: AsyncSession) -> dict:
     return await create_user_token(token_record.user_id, db)
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_session)) -> User:
-    """获取当前认证用户
-
-    Args:
-        token: JWT令牌
-        db: 数据库会话
-
-    Returns:
-        User: 当前用户对象
-
-    Raises:
-        HTTPException: 认证失败时抛出
-    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="无效的认证凭据",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    logger.info(f"收到 token: [{token}]")
+    logger.info(f"Token 长度: {len(token) if token else 0}")
+    logger.info(f"Token 部分数: {len(token.split('.')) if token else 0}")
+
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")
+        logger.info(f"Token 解码成功, user_id: {user_id}")
         if user_id is None:
+            logger.warning("Token 中 sub 字段为空")
             raise credentials_exception
-    except JWTError:
+    except JWTError as e:
+        logger.warning(f"Token 解码失败: {e}")
         raise credentials_exception
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
+        logger.warning(f"用户不存在: {user_id}")
         raise credentials_exception
     if not user.is_active:
         raise HTTPException(status_code=400, detail="用户已被禁用")
