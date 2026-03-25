@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(alembic current:*)",
+      "Bash(uv run:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(alembic heads:*)",
+      "Bash(alembic stamp:*)",
+      "Bash(PGPASSWORD=\"2wsxcft6.\" psql:*)",
+      "Bash(alembic upgrade:*)",
+      "Bash(uv --version)",
+      "Bash(ECC_ROOT=\"C:\\\\Users\\\\AlanS\\\\.claude\\\\plugins\\\\cache\\\\everything-claude-code\\\\everything-claude-code\\\\1.7.0\")",
+      "Bash(echo \"ECC_ROOT: $ECC_ROOT\")",
+      "Read(//d/workspace/fastapi-scaff-demo/$ECC_ROOT/**)",
+      "Bash(TARGET=\"C:\\\\Users\\\\AlanS\\\\.claude\\\\skills\")",
+      "Bash(cp -r \"$ECC_ROOT/skills/python-patterns\" \"$TARGET/\")",
+      "Bash(TARGET=\"C:\\\\Users\\\\AlanS\\\\.claude\\\\rules\")",
+      "Bash(mkdir -p \"$TARGET/python\")",
+      "Bash(cp -r \"$ECC_ROOT/rules/python\"/* \"$TARGET/python/\")",
+      "Read(//tmp/everything-claude-code/.agents/**)",
+      "Bash(for dir:*)",
+      "Bash(do cp:*)",
+      "Bash(done)",
+      "Bash(cp:*)",
+      "Bash(claude --version)",
+      "Bash(where claude:*)",
+      "Bash(npm list:*)",
+      "Bash(npm view:*)",
+      "Bash(npm search:*)",
+      "Bash(vulture:*)"
+    ]
+  }
+}

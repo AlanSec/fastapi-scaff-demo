@@ -1,0 +1,23 @@
+[project]
+name = "fastapi-scaff-demo"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "python-jose>=3.4.0",
+    "cryptography",
+    "fastapi",
+    "loguru",
+    "passlib",
+    "bcrypt>=4.0.1,<4.3.0",  # 与 passlib 1.7.4 兼容的版本
+    "pydantic",
+    "pydantic_settings",
+    "pytest",
+    "python-dotenv",
+    "SQLAlchemy",
+    "sqlmodel",
+    "starlette",
+    "toollib",
+    "uvicorn",
+]
