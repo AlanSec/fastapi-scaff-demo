@@ -51,6 +51,12 @@ async def read_tenant_by_id(
     current_user: User = Depends(get_current_user),
 ) -> Any:
     """获取指定租户信息"""
+    # 租户隔离检查：超级管理员可访问所有租户，普通用户只能访问自己的租户
+    if not current_user.is_superuser and str(current_user.tenant_id) != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权访问该租户信息"
+        )
     tenant = await service.read_tenant(tenant_id, current_user)
     return tenant
 
@@ -63,6 +69,11 @@ async def update_tenant(
     current_user: User = Depends(get_current_active_superuser),
 ) -> Any:
     """更新指定租户信息（仅超级管理员）"""
+    if not current_user.is_superuser and str(current_user.tenant_id) != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权更新该租户信息"
+        )
     tenant = await service.update_tenant(tenant_id, tenant_in)
     return tenant
 
@@ -76,5 +87,10 @@ async def read_tenant_users(
     current_user: User = Depends(get_current_user),
 ) -> Any:
     """获取指定租户的用户列表"""
+    if not current_user.is_superuser and str(current_user.tenant_id) != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权访问该租户用户列表"
+        )
     users = await service.read_tenant_by_id(tenant_id, skip, limit, current_user)
     return users

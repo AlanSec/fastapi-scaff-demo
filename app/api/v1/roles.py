@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.user import User
 from app.schemas.role import RoleCreate, RoleUpdate, RoleOut
 from app.schemas.role_permission import RolePermissionOut
 from app.services.role import RoleService
@@ -19,7 +20,8 @@ async def get_role_service(db: AsyncSession = Depends(get_session)) -> RoleServi
 
 @roles_router.get("/role", response_model=list[RoleOut])
 async def get_all_roles(
-    service: RoleService = Depends(get_role_service)
+    service: RoleService = Depends(get_role_service),
+    _: User = Depends(get_current_active_superuser)
 ):
     """获取所有角色列表"""
     return await service.get_all_roles()

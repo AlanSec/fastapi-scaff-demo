@@ -95,3 +95,22 @@ Tenant (1:N) User (M:N) Role (M:N) Permission
 - 测试通过 `conftest.py` 中的 `test_client` fixture 获得 FastAPI TestClient
 - `setup_database` fixture 为每个测试函数自动建表/删表，测试间完全隔离
 - 测试用的 app 只注册了认证相关路由（register、password、verify），非认证测试需自行添加路由
+
+## Claude Code 配置
+
+### 已安装技能 (Python 相关)
+- **Python核心**: python-patterns, python-testing, backend-patterns
+- **Django相关**: django-patterns, django-security, django-tdd, django-verification
+- **数据库/部署**: postgres-patterns, database-migrations, deployment-patterns, docker-patterns
+- **工作流**: tdd-workflow, verification-loop, continuous-learning-v2, search-first
+- **其他**: api-design, coding-standards, e2e-testing, security-review, strategic-compact
+
+### 已安装 Agents
+- 位于 `~/.claude/agents/skills/` 目录
+- 包含所有技能对应的 agent 配置 (openai.yaml)
+
+### 使用方式
+- `/tdd-workflow` - 启动 TDD 工作流
+- `/security-review` - 安全审查
+- `/python-patterns` - Python 最佳实践
+- 其他技能可通过 `/` 命令触发

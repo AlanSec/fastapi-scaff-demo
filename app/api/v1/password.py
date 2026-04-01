@@ -1,16 +1,17 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.security import get_password_hash
 from app.db.session import get_session
-from app.schemas.auth import ForgotPasswordRequest, ResetPasswordRequest
+from app.schemas.auth import ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest
 from app.services.auth import get_current_user
 from app.services.email import email_service
 from app.services.verification import VerificationService
 from app.models.user import User
+from app.api.rate_limit import rate_limit
 
 
 password_router = APIRouter()
@@ -24,7 +25,9 @@ async def get_verification_service(db: AsyncSession = Depends(get_session)) -> V
 
 
 @password_router.post("/password/forgot")
+@rate_limit(max_requests=3, window_seconds=60)
 async def forgot_password(
+    request: Request,
     forgot_data: ForgotPasswordRequest,
     verification_service: VerificationService = Depends(get_verification_service),
     db: AsyncSession = Depends(get_session),
@@ -67,7 +70,9 @@ async def forgot_password(
 
 
 @password_router.post("/password/reset")
+@rate_limit(max_requests=5, window_seconds=60)
 async def reset_password(
+    request: Request,
     reset_data: ResetPasswordRequest,
     verification_service: VerificationService = Depends(get_verification_service),
     db: AsyncSession = Depends(get_session),
@@ -99,15 +104,11 @@ async def reset_password(
 
 @password_router.post("/password/change")
 async def change_password(
-    current_password: str,
-    new_password: str,
-    current_user: User = Depends(get_current_user),  # 需要用户登录
+    password_data: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ) -> Any:
-    """更改密码（需要登录）
-
-    登录用户更改自己的密码。
-    """
+    """更改密码（需要登录）"""
     from app.core.security import verify_password
 
     if not current_user:
@@ -116,15 +117,13 @@ async def change_password(
             detail="需要登录"
         )
 
-    # 验证当前密码
-    if not verify_password(current_password, current_user.hashed_password):
+    if not verify_password(password_data.current_password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="当前密码不正确"
         )
 
-    # 更新密码
-    current_user.hashed_password = get_password_hash(new_password)
+    current_user.hashed_password = get_password_hash(password_data.new_password)
     await db.commit()
 
     return {"message": "密码更改成功"}

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.user import User
 from app.schemas.permission import PermissionCreate, PermissionUpdate, PermissionOut
 from app.services.permission import PermissionService
 from app.services.auth import get_current_active_superuser
@@ -18,7 +19,8 @@ async def get_permission_service(db: AsyncSession = Depends(get_session)) -> Per
 
 @permissions_router.get("/permission", response_model=list[PermissionOut])
 async def get_all_permissions(
-    service: PermissionService = Depends(get_permission_service)
+    service: PermissionService = Depends(get_permission_service),
+    _: User = Depends(get_current_active_superuser)
 ):
     """获取所有权限列表"""
     return await service.get_all_permissions()

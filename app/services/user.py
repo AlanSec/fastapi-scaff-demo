@@ -3,7 +3,7 @@ from typing import List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_password_hash
-from app.schemas.user import UserCreate, UserUpdate
+from app.schemas.user import UserCreate, UserUpdate, UserUpdateMe
 from app.models import User
 
 
@@ -76,7 +76,7 @@ class UserService:
         return
     async def read_user_me(self, current_user: User) -> User:
         return current_user
-    async def update_user_me(self, user_in: UserUpdate, current_user: User) -> User:
+    async def update_user_me(self, user_in: UserUpdateMe, current_user: User) -> User:
         if user_in.password is not None:
             hashed_password = get_password_hash(user_in.password)
             current_user.hashed_password = hashed_password

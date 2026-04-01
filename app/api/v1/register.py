@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
@@ -10,6 +10,7 @@ from app.services.auth import get_current_user
 from app.services.email import email_service
 from app.services.user import UserService
 from app.services.verification import VerificationService
+from app.api.rate_limit import rate_limit
 
 
 register_router = APIRouter()
@@ -28,7 +29,9 @@ async def get_verification_service(db: AsyncSession = Depends(get_session)) -> V
 
 
 @register_router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+@rate_limit(max_requests=3, window_seconds=60)
 async def register(
+    request: Request,
     register_data: RegisterRequest,
     user_service: UserService = Depends(get_user_service),
     verification_service: VerificationService = Depends(get_verification_service),

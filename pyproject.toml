@@ -10,7 +10,7 @@ dependencies = [
     "fastapi",
     "loguru",
     "passlib",
-    "bcrypt>=4.0.1,<4.3.0",  # 与 passlib 1.7.4 兼容的版本
+    "bcrypt>=4.0.1,<4.3.0",
     "pydantic",
     "pydantic_settings",
     "pytest",
@@ -20,4 +20,5 @@ dependencies = [
     "starlette",
     "toollib",
     "uvicorn",
+    "slowapi",
 ]

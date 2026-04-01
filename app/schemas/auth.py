@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class RegisterRequest(BaseModel):
@@ -9,6 +9,19 @@ class RegisterRequest(BaseModel):
     email: EmailStr = Field(..., description="用户邮箱")
     username: str = Field(..., min_length=3, max_length=50, description="用户名")
     password: str = Field(..., min_length=8, max_length=100, description="密码")
+
+    @field_validator('password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError('密码长度至少8个字符')
+        if not any(c.isupper() for c in v):
+            raise ValueError('密码必须包含至少一个大写字母')
+        if not any(c.islower() for c in v):
+            raise ValueError('密码必须包含至少一个小写字母')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('密码必须包含至少一个数字')
+        return v
 
 
 class RegisterResponse(BaseModel):
@@ -29,6 +42,19 @@ class ResetPasswordRequest(BaseModel):
     token: str = Field(..., description="重置令牌")
     new_password: str = Field(..., min_length=8, max_length=100, description="新密码")
 
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError('密码长度至少8个字符')
+        if not any(c.isupper() for c in v):
+            raise ValueError('密码必须包含至少一个大写字母')
+        if not any(c.islower() for c in v):
+            raise ValueError('密码必须包含至少一个小写字母')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('密码必须包含至少一个数字')
+        return v
+
 
 class VerifyEmailRequest(BaseModel):
     """验证邮箱请求模型"""
@@ -48,3 +74,22 @@ class ResendVerificationRequest(BaseModel):
 class ResendVerificationResponse(BaseModel):
     """重新发送验证邮件响应模型"""
     message: str = "验证邮件已重新发送"
+
+
+class ChangePasswordRequest(BaseModel):
+    """修改密码请求模型"""
+    current_password: str = Field(..., description="当前密码")
+    new_password: str = Field(..., min_length=8, max_length=100, description="新密码")
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError('密码长度至少8个字符')
+        if not any(c.isupper() for c in v):
+            raise ValueError('密码必须包含至少一个大写字母')
+        if not any(c.islower() for c in v):
+            raise ValueError('密码必须包含至少一个小写字母')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('密码必须包含至少一个数字')
+        return v

@@ -171,9 +171,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    logger.info(f"收到 token: [{token}]")
-    logger.info(f"Token 长度: {len(token) if token else 0}")
-    logger.info(f"Token 部分数: {len(token.split('.')) if token else 0}")
+    logger.debug(f"Token 长度: {len(token) if token else 0}")
+    logger.debug(f"Token 部分数: {len(token.split('.')) if token else 0}")
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])

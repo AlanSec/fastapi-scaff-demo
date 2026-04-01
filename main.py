@@ -7,11 +7,9 @@ load_dotenv()
 
 import uvicorn
 
-from app.core.config import settings
-
 
 logging.basicConfig(
-    level=getattr(logging, settings.LOG_LEVEL),
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
@@ -24,16 +22,21 @@ logger.info("日志系统已初始化")
 
 def main():
     """应用程序入口点"""
-    logger.info("正在启动AIGC一站式平台...")
-    logger.info(f"数据库URI: {settings.SQLALCHEMY_DATABASE_URI}")
+    logger.info("正在启动 FastAPI Enterprise 架构...")
+
+    # 使用新架构的 create_app()
+    from src.bootstrap.lifespan import create_app
+    app = create_app()
+
+    logger.info("应用已创建，使用 src 架构")
 
     # 使用uvicorn启动FastAPI应用
     uvicorn.run(
-        "app.main:app",
+        app,
         host="0.0.0.0",
         port=8000,
         reload=True,
-        log_level=settings.LOG_LEVEL.lower(),
+        log_level="info",
     )
 
 

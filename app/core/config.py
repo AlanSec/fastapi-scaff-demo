@@ -97,11 +97,11 @@ class Settings(BaseSettings):
         raise ValueError(v)
 
     # SMTP邮件配置（用于发送验证邮件和密码重置邮件）
-    SMTP_HOST :str = "smtp.gmail.com"
+    SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
-    SMTP_USER: str = "youremail@gmail.com"
-    SMTP_PASSWORD : str=  "test111111"# 应用专用密码
-    SMTP_FROM_EMAIL : str= "noreply@example.com"
+    SMTP_USER: str = ""  # 必须通过环境变量设置
+    SMTP_PASSWORD: str = ""  # 必须通过环境变量设置
+    SMTP_FROM_EMAIL: str = "noreply@example.com"
     SMTP_FROM_NAME: str = "FastAPI App"
 
     class Config:
