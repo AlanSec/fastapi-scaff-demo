@@ -13,7 +13,7 @@ from src.api.routes.password_routes import password_router, verify_router, set_p
 
 
 def _register_legacy_routers(app: FastAPI):
-    """注册遗留路由 (app/api/v1/)"""
+    """注册遗留路由 (app/api/v1/) with /api/v1 prefix"""
     app_dir = Path(__file__).parent.parent.parent / "app"
     api_v1_dir = app_dir / "api" / "v1"
     
@@ -32,8 +32,8 @@ def _register_legacy_routers(app: FastAPI):
             if hasattr(mod, router_name):
                 router = getattr(mod, router_name)
                 tag = getattr(mod, "_tag", mod_name)
-                app.include_router(router, tags=[tag])
-                logger.info(f"Registered legacy router: {mod_name} (tag: {tag})")
+                app.include_router(router, prefix="/api/v1", tags=[tag])
+                logger.info(f"Registered legacy router: {mod_name} at /api/v1 (tag: {tag})")
         except Exception as e:
             logger.error(f"Failed to register {mod_name}: {e}")
 
