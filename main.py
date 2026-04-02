@@ -24,19 +24,15 @@ def main():
     """应用程序入口点"""
     logger.info("正在启动 FastAPI Enterprise 架构...")
 
-    # 使用新架构的 create_app()
-    from src.bootstrap.lifespan import create_app
-    app = create_app()
-
-    logger.info("应用已创建，使用 src 架构")
-
     # 使用uvicorn启动FastAPI应用
+    # 注意：必须使用 import string 而不是 app 对象，否则 reload 会失效
     uvicorn.run(
-        app,
+        "src.bootstrap.lifespan:create_app",
         host="0.0.0.0",
         port=8000,
         reload=True,
         log_level="info",
+        factory=True,
     )
 
 
