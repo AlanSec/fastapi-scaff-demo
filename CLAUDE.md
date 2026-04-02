@@ -34,17 +34,31 @@ alembic upgrade head
 
 ```
 main.py                 → 入口，启动 uvicorn
-app/main.py             → FastAPI 工厂，注册路由与中间件
-app/api/v1/             → 路由层（HTTP 端点），文件名即模块名
-app/services/           → 业务逻辑层，路由不应包含业务逻辑
-app/models/             → SQLModel 数据模型，每个模型一个文件
-app/schemas/            → Pydantic 请求/响应 Schema
-app/core/               → 配置(config)、安全(security)、异常(exceptions)
-app/db/session.py       → 异步数据库引擎与 get_session 依赖
-app/router/__init__.py  → 自动路由注册（递归扫描 app/api/）
-app/middleware/          → 全局中间件（异常处理等）
-app/test/               → pytest 测试，使用 SQLite 内存数据库
+src/
+├── domain/             → 领域层：实体、值对象、仓储接口、领域服务
+├── infrastructure/     → 基础设施层：安全、持久化、外部服务
+├── application/        → 应用层：DTO、Use Cases
+├── api/                → API 层：Schema、Controller、Routes
+└── bootstrap/          → 启动层：DI 容器、配置、生命周期
+
+app/api/v1/             → 遗留路由层（多租户、RBAC）
+app/services/           → 遗留业务逻辑层
+app/models/             → SQLModel 数据模型
 ```
+
+### API 版本管理
+
+项目采用 **URL 版本管理**方案，所有 API 统一在 `/api/v1/` 前缀下：
+
+```
+/api/v1/auth/register      → 注册
+/api/v1/auth/login         → 登录
+/api/v1/password/forgot    → 忘记密码
+/api/v1/roles/             → 角色管理
+/api/v1/tenants/           → 租户管理
+```
+
+**未来扩展 v2**：创建新的路由模块，注册到 `/api/v2/` 下，实现平滑升级。
 
 ### 自动路由注册机制
 

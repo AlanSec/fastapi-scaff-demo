@@ -26,8 +26,8 @@ class TestCreateApp:
     def test_create_app_includes_auth_router(self):
         app = create_app()
         routes = [route.path for route in app.routes]
-        assert "/auth/register" in routes
-        assert "/auth/login" in routes
+        assert "/api/v1/auth/register" in routes
+        assert "/api/v1/auth/login" in routes
 
     def test_create_app_has_lifespan_context_manager(self):
         app = create_app()
@@ -42,5 +42,5 @@ class TestCreateApp:
                 for method in route.methods:
                     route_methods[route.path] = method
         
-        assert "POST" in route_methods.get("/auth/register", set())
-        assert "POST" in route_methods.get("/auth/login", set())
+        assert "POST" in route_methods.get("/api/v1/auth/register", set())
+        assert "POST" in route_methods.get("/api/v1/auth/login", set())

@@ -21,11 +21,16 @@ def _register_legacy_routers(app: FastAPI):
         logger.warning(f"Legacy API dir not found: {api_v1_dir}")
         return
     
+    migrated_modules = {"password", "verify"}
+    
     for item in api_v1_dir.iterdir():
         if item.name.startswith("__") or not item.name.endswith(".py"):
             continue
         
         mod_name = item.stem
+        if mod_name in migrated_modules:
+            continue
+        
         try:
             mod = importlib.import_module(f"app.api.v1.{mod_name}")
             router_name = f"{mod_name}_router"
@@ -50,12 +55,12 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="FastAPI Enterprise", lifespan=lifespan)
     
-    # 新架构路由
-    app.include_router(auth_router)
-    app.include_router(password_router)
-    app.include_router(verify_router)
+    API_V1_PREFIX = "/api/v1"
     
-    # 遗留路由 (多租户, RBAC)
+    app.include_router(auth_router, prefix=API_V1_PREFIX)
+    app.include_router(password_router, prefix=API_V1_PREFIX)
+    app.include_router(verify_router, prefix=API_V1_PREFIX)
+    
     _register_legacy_routers(app)
     
     return app
