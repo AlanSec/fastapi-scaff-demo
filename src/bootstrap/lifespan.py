@@ -4,6 +4,14 @@ from pathlib import Path
 import importlib
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from src.api.middleware.exception_handlers import (
+    http_exception_handler,
+    validation_exception_handler,
+    general_exception_handler,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +87,34 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="FastAPI Enterprise", lifespan=lifespan)
 
+    # CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:8000",
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:8000",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173",
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Request logging middleware
+    class RequestLogMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next):
+            logger.info("%s %s", request.method, request.url.path)
+            return await call_next(request)
+
+    app.add_middleware(RequestLogMiddleware)
+
+    # Exception handlers
+    app.add_exception_handler(Exception, general_exception_handler)
+
+    API_V1_PREFIX = "/api/v1"
     API_V1_PREFIX = "/api/v1"
 
     app.include_router(auth_router, prefix=API_V1_PREFIX)
