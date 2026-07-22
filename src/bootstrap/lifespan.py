@@ -35,8 +35,6 @@ def _register_legacy_routers(app: FastAPI):
         logger.warning("Legacy API dir not found: %s", api_v1_dir)
         return
 
-    migrated_modules = {"password", "verify", "auth", "tenants", "roles", "permissions", "users"}
-
     for item in api_v1_dir.iterdir():
         if item.name.startswith("__") or not item.name.endswith(".py"):
             continue
