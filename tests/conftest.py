@@ -1,9 +1,9 @@
-import pytest
+﻿import pytest
 import pytest_asyncio
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 from typing import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from src.domain.value_objects.email import Email
 from src.domain.value_objects.password import HashedPassword
@@ -18,7 +18,7 @@ def mock_user_repository():
 
 @pytest.fixture
 def mock_password_hasher():
-    return AsyncMock()
+    return MagicMock()
 
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def sample_password():
 
 @pytest.fixture
 def hashed_password():
-    return HashedPassword("$2b$12$hashedpassword")
+    return HashedPassword("")
 
 
 @pytest.fixture
@@ -59,16 +59,3 @@ def future_datetime(utc_now):
 @pytest.fixture
 def past_datetime(utc_now):
     return utc_now - timedelta(minutes=30)
-
-
-@pytest.fixture
-def mock_rate_limiter():
-    return AsyncMock()
-
-
-@pytest.fixture
-def mock_config():
-    return AsyncMock()
-
-
-from datetime import timedelta

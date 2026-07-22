@@ -1,25 +1,4 @@
-"""RateLimiter 接口和实现"""
-from abc import ABC, abstractmethod
-from typing import Optional
-
-
-class RateLimiter(ABC):
-    """速率限制器接口"""
-    
-    @abstractmethod
-    async def check_rate_limit(self, key: str, limit: int, window_seconds: int) -> bool:
-        """检查是否超过速率限制"""
-        pass
-    
-    @abstractmethod
-    async def get_remaining(self, key: str, limit: int, window_seconds: int) -> int:
-        """获取剩余请求次数"""
-        pass
-    
-    @abstractmethod
-    async def reset(self, key: str) -> None:
-        """重置速率限制"""
-        pass
+﻿from src.domain.services.security_interfaces import RateLimiter
 
 
 class InMemoryRateLimiter(RateLimiter):

@@ -3,7 +3,7 @@ import pytest
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-from src.domain.entities.auth import JWTProvider
+from src.domain.services.security_interfaces import JWTProvider
 from src.domain.entities.user import User
 from src.domain.value_objects.email import Email
 from src.domain.value_objects.password import HashedPassword

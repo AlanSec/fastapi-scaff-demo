@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from dataclasses import replace
+from datetime import datetime
 from typing import Optional
 
 from src.application.dto.password_dto import (
@@ -20,12 +22,16 @@ class VerifyEmailUseCase:
         
         if user is None:
             raise ValueError("Invalid verification token")
-        
-        user.is_verified = True
-        user.verification_token = None
-        
-        await self.user_repository.save(user)
-        
+
+        updated_user = replace(
+            user,
+            is_verified=True,
+            verification_token=None,
+            updated_at=datetime.now()
+        )
+
+        await self.user_repository.save(updated_user)
+
         return VerifyEmailOutputDTO(
             message="Email verified successfully",
             is_verified=True

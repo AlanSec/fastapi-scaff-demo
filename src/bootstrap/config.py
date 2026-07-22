@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,6 +10,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=30, description="访问令牌过期时间(分钟)")
     refresh_token_expire_days: int = Field(default=7, description="刷新令牌过期时间(天)")
     database_url: str = Field(default="sqlite+aiosqlite:///./test.db", description="数据库连接URL")
+
+    # 管理员配置
+    admin_email: str = Field(default="admin@example.com", description="管理员邮箱")
+    admin_username: str = Field(default="admin", description="管理员用户名")
+    admin_password: str = Field(default="Admin123456", description="管理员密码")
+    admin_is_superuser: bool = Field(default=True, description="管理员是否超级用户")
 
 
 settings = Settings()

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from src.application.dto.auth_dto import RegisterUserInputDTO, RegisterUserOutputDTO
 from src.domain.entities.user import User
 from src.domain.repositories.user_repository import UserRepository
+from src.domain.services.security_interfaces import PasswordHasher
 from src.domain.value_objects.email import Email
 from src.domain.value_objects.password import HashedPassword, Password
 
@@ -10,7 +11,7 @@ from src.domain.value_objects.password import HashedPassword, Password
 @dataclass
 class RegisterUserUseCase:
     user_repository: UserRepository
-    password_hasher: 'HasherProtocol'
+    password_hasher: PasswordHasher
     
     async def execute(self, dto: RegisterUserInputDTO) -> RegisterUserOutputDTO:
         password = Password(dto.password)
@@ -36,8 +37,3 @@ class RegisterUserUseCase:
             tenant_id=user.tenant_id,
             is_verified=user.is_verified
         )
-
-
-class HasherProtocol:
-    def hash(self, password: Password) -> HashedPassword:
-        pass

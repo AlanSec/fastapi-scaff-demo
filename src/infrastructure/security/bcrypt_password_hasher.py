@@ -1,7 +1,7 @@
 """Bcrypt 密码哈希器实现"""
 import bcrypt
 
-from src.domain.entities.auth import PasswordHasher
+from src.domain.services.security_interfaces import PasswordHasher
 from src.domain.value_objects.password import Password, HashedPassword
 
 

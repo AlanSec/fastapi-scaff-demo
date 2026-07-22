@@ -4,7 +4,7 @@ from typing import Optional
 
 import jwt
 
-from src.domain.entities.auth import JWTProvider
+from src.domain.services.security_interfaces import JWTProvider
 from src.domain.entities.user import User
 
 

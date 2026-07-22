@@ -4,6 +4,7 @@ from uuid import UUID
 from src.application.dto.auth_dto import LoginUserInputDTO, LoginUserOutputDTO
 from src.domain.entities.user import User
 from src.domain.repositories.user_repository import UserRepository
+from src.domain.services.security_interfaces import PasswordHasher, JWTProvider
 from src.domain.value_objects.email import Email
 from src.domain.value_objects.password import HashedPassword, Password
 
@@ -11,8 +12,8 @@ from src.domain.value_objects.password import HashedPassword, Password
 @dataclass
 class LoginUserUseCase:
     user_repository: UserRepository
-    password_hasher: 'HasherProtocol'
-    jwt_provider: 'JWTProtocol'
+    password_hasher: PasswordHasher
+    jwt_provider: JWTProvider
     
     async def execute(self, dto: LoginUserInputDTO) -> LoginUserOutputDTO:
         user = await self.user_repository.find_by_email(dto.email, dto.tenant_id)
@@ -41,16 +42,3 @@ class LoginUserUseCase:
             refresh_token=refresh_token,
             expires_in=1800
         )
-
-
-class HasherProtocol:
-    def verify(self, password: Password, hashed: HashedPassword) -> bool:
-        pass
-
-
-class JWTProtocol:
-    def create_access_token(self, user: User) -> str:
-        pass
-    
-    def create_refresh_token(self, user: User) -> str:
-        pass

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from src.bootstrap.config import Settings
 from src.infrastructure.security.bcrypt_password_hasher import BcryptPasswordHasher
 from src.infrastructure.security.jwt_provider import JWTProviderImpl
 from src.infrastructure.persistence.in_memory.in_memory_user_repository import InMemoryUserRepository
@@ -15,25 +16,11 @@ from src.api.controllers.auth_controller import AuthController
 from src.api.controllers.password_controller import PasswordController, VerifyController
 
 
-@dataclass
-class AppConfig:
-    secret_key: str = "dev-secret-key-change-in-production"
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
-    refresh_token_expire_days: int = 7
-
-
 class Container:
     _instance = None
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
-
     def __init__(self):
-        if self._initialized:
+        if hasattr(self, '_initialized') and self._initialized:
             return
         self._initialized = True
         self._config = None
@@ -52,9 +39,9 @@ class Container:
         self._verify_controller = None
 
     @property
-    def config(self) -> AppConfig:
+    def config(self) -> Settings:
         if self._config is None:
-            self._config = AppConfig()
+            self._config = Settings()
         return self._config
 
     @property

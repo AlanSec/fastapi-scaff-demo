@@ -1,7 +1,7 @@
 """Bcrypt 密码哈希器测试"""
 import pytest
 
-from src.domain.entities.auth import PasswordHasher
+from src.domain.services.security_interfaces import PasswordHasher
 from src.domain.value_objects.password import Password, HashedPassword
 from src.infrastructure.security.bcrypt_password_hasher import BcryptPasswordHasher
 
