@@ -1,5 +1,14 @@
 ﻿# FastAPI Scaff Demo
 
+# FastAPI Scaff Demo
+<div align="center">
+
+[**English**](./README.md) | [**中文**](./README.zh.md)
+
+</div>
+
+<br>
+
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 
 Multi-tenant RBAC authentication system built with FastAPI, currently in a transitional architecture phase — the legacy `app/` layer (SQLModel + flat structure) coexists with the new `src/` layer (DDD four-layer architecture), both registered on the same FastAPI instance.
