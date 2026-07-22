@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 from src.bootstrap.container import get_container
 from src.bootstrap.ensure_admin import ensure_admin_user
 from src.api.routes.auth_routes import auth_router, set_controller
+from src.api.routes.tenant_routes import tenant_router, set_tenant_controller
+from src.api.routes.role_routes import role_router, set_role_controller
+from src.api.routes.permission_routes import permission_router, set_permission_controller
 from src.api.routes.password_routes import password_router, verify_router, set_password_controller, set_verify_controller
 from app.db.session import init_db
 
@@ -23,7 +26,7 @@ def _register_legacy_routers(app: FastAPI):
         logger.warning("Legacy API dir not found: %s", api_v1_dir)
         return
 
-    migrated_modules = {"password", "verify", "auth"}
+    migrated_modules = {"password", "verify", "auth", "tenants", "roles", "permissions", "users"}
 
     for item in api_v1_dir.iterdir():
         if item.name.startswith("__") or not item.name.endswith(".py"):
@@ -58,6 +61,9 @@ async def lifespan(app: FastAPI):
     set_controller(container.auth_controller)
     set_password_controller(container.password_controller)
     set_verify_controller(container.verify_controller)
+    set_tenant_controller(container.tenant_controller)
+    set_role_controller(container.role_controller)
+    set_permission_controller(container.permission_controller)
 
     # Ensure default admin user exists
     try:
@@ -76,6 +82,9 @@ def create_app() -> FastAPI:
     app.include_router(auth_router, prefix=API_V1_PREFIX)
     app.include_router(password_router, prefix=API_V1_PREFIX)
     app.include_router(verify_router, prefix=API_V1_PREFIX)
+    app.include_router(tenant_router, prefix=API_V1_PREFIX)
+    app.include_router(role_router, prefix=API_V1_PREFIX)
+    app.include_router(permission_router, prefix=API_V1_PREFIX)
 
     _register_legacy_routers(app)
 

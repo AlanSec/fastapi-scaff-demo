@@ -1,0 +1,87 @@
+from uuid import UUID
+
+from src.application.dto.role_dto import (
+    CreateRoleInputDTO,
+    UpdateRoleInputDTO,
+)
+from src.application.use_cases.role_use_case import (
+    CreateRoleUseCase,
+    GetRoleUseCase,
+    ListRolesUseCase,
+    UpdateRoleUseCase,
+    DeleteRoleUseCase,
+)
+from src.api.schemas.role_schema import (
+    RoleCreateRequest,
+    RoleUpdateRequest,
+    RoleResponse,
+    RoleListResponse,
+)
+
+
+class RoleController:
+
+    def __init__(
+        self,
+        create_use_case: CreateRoleUseCase,
+        get_use_case: GetRoleUseCase,
+        list_use_case: ListRolesUseCase,
+        update_use_case: UpdateRoleUseCase,
+        delete_use_case: DeleteRoleUseCase,
+    ):
+        self._create_use_case = create_use_case
+        self._get_use_case = get_use_case
+        self._list_use_case = list_use_case
+        self._update_use_case = update_use_case
+        self._delete_use_case = delete_use_case
+
+    async def create(self, request: RoleCreateRequest) -> RoleResponse:
+        dto = CreateRoleInputDTO(
+            name=request.name,
+            description=request.description,
+            tenant_id=request.tenant_id,
+        )
+        result = await self._create_use_case.execute(dto)
+        return RoleResponse(
+            id=result.id, name=result.name, description=result.description,
+            is_active=result.is_active, tenant_id=result.tenant_id,
+            created_at=result.created_at, updated_at=result.updated_at,
+        )
+
+    async def get_by_id(self, role_id: UUID) -> RoleResponse | None:
+        result = await self._get_use_case.execute(role_id)
+        if result is None:
+            return None
+        return RoleResponse(
+            id=result.id, name=result.name, description=result.description,
+            is_active=result.is_active, tenant_id=result.tenant_id,
+            created_at=result.created_at, updated_at=result.updated_at,
+        )
+
+    async def list(self, skip: int = 0, limit: int = 100) -> RoleListResponse:
+        items = await self._list_use_case.execute(skip=skip, limit=limit)
+        return RoleListResponse(
+            items=[
+                RoleResponse(
+                    id=r.id, name=r.name, description=r.description,
+                    is_active=r.is_active, tenant_id=r.tenant_id,
+                    created_at=r.created_at, updated_at=r.updated_at,
+                )
+                for r in items
+            ],
+            total=len(items),
+        )
+
+    async def update(self, role_id: UUID, request: RoleUpdateRequest) -> RoleResponse | None:
+        dto = UpdateRoleInputDTO(name=request.name, description=request.description)
+        result = await self._update_use_case.execute(role_id, dto)
+        if result is None:
+            return None
+        return RoleResponse(
+            id=result.id, name=result.name, description=result.description,
+            is_active=result.is_active, tenant_id=result.tenant_id,
+            created_at=result.created_at, updated_at=result.updated_at,
+        )
+
+    async def delete(self, role_id: UUID) -> bool:
+        return await self._delete_use_case.execute(role_id)

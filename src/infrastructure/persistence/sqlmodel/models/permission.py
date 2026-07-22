@@ -19,5 +19,7 @@ class PermissionModel(SQLModel, table=True):
     resource: str = Field(index=True)
     description: str | None = None
     created_at: datetime = Field(default_factory=datetime.now)
+    is_active: bool = Field(default=True)
+    updated_at: datetime = Field(default_factory=datetime.now)
     
     role_permissions: list["RolePermissionModel"] = Relationship(back_populates="permission")

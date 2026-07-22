@@ -1,4 +1,4 @@
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
@@ -16,17 +16,19 @@ class Role:
     name: RoleName
     description: str
     is_active: bool
+    tenant_id: UUID = field()
     created_at: datetime
     updated_at: datetime
 
     @classmethod
-    def create(cls, name: RoleName, description: str) -> "Role":
+    def create(cls, name: RoleName, description: str, tenant_id: UUID | None = None) -> "Role":
         now = datetime.now()
         return cls(
             id=uuid4(),
             name=name,
             description=description,
             is_active=True,
+            tenant_id=tenant_id or uuid4(),
             created_at=now,
             updated_at=now
         )
@@ -49,5 +51,12 @@ class Role:
         return replace(
             self,
             description=new_description,
+            updated_at=datetime.now()
+        )
+
+    def update_name(self, new_name: RoleName) -> "Role":
+        return replace(
+            self,
+            name=new_name,
             updated_at=datetime.now()
         )

@@ -17,6 +17,7 @@ class TenantModel(SQLModel, table=True):
     
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(index=True)
+    domain: str | None = None
     description: str | None = None
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.now)
