@@ -1,4 +1,4 @@
-﻿"""Test runner — runs both legacy (app/test/) and new (tests/) test suites."""
+﻿"""Test runner — runs the new architecture test suite."""
 
 import subprocess
 import sys
@@ -11,7 +11,7 @@ def run_all_tests():
 
     cmd = [
         sys.executable, "-m", "pytest",
-        "app/test/", "tests/",
+        "tests/",
         "-v",
         "--tb=short",
     ]
