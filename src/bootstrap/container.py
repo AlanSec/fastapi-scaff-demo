@@ -31,6 +31,12 @@ from src.api.controllers.auth_controller import AuthController
 from src.api.controllers.tenant_controller import TenantController
 from src.api.controllers.role_controller import RoleController
 from src.api.controllers.permission_controller import PermissionController
+from src.application.use_cases.user_admin_use_case import (
+    AdminCreateUserUseCase, AdminListUsersUseCase, AdminGetUserUseCase,
+    AdminUpdateUserUseCase, AdminDeleteUserUseCase,
+    AdminGetCurrentUserUseCase, AdminUpdateCurrentUserUseCase,
+)
+from src.api.controllers.user_admin_controller import UserAdminController
 from src.api.controllers.password_controller import PasswordController, VerifyController
 
 
@@ -76,6 +82,14 @@ class Container:
         self._tenant_controller = None
         self._role_controller = None
         self._permission_controller = None
+        self._admin_create_user_use_case = None
+        self._admin_list_users_use_case = None
+        self._admin_get_user_use_case = None
+        self._admin_update_user_use_case = None
+        self._admin_delete_user_use_case = None
+        self._admin_get_current_user_use_case = None
+        self._admin_update_current_user_use_case = None
+        self._user_admin_controller = None
 
     @property
     def config(self) -> Settings:

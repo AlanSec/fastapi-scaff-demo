@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4

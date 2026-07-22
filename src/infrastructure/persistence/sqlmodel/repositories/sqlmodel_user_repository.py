@@ -69,6 +69,14 @@ class SQLModelUserRepository(UserRepository):
         await self._session.commit()
         return True
     
+    async def find_all(self, skip: int = 0, limit: int = 100) -> List[User]:
+        from sqlalchemy import select
+        result = await self._session.execute(
+            select(UserModel).offset(skip).limit(limit)
+        )
+        models = result.scalars().all()
+        return [UserMapper.to_entity(m) for m in models]
+
     async def find_by_reset_token(self, token: str) -> Optional[User]:
         """通过重置令牌查找用户"""
         from sqlalchemy import select

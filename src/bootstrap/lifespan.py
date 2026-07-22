@@ -13,6 +13,7 @@ from src.api.routes.auth_routes import auth_router, set_controller
 from src.api.routes.tenant_routes import tenant_router, set_tenant_controller
 from src.api.routes.role_routes import role_router, set_role_controller
 from src.api.routes.permission_routes import permission_router, set_permission_controller
+from src.api.routes.user_admin_routes import user_admin_router, set_user_admin_controller
 from src.api.routes.password_routes import password_router, verify_router, set_password_controller, set_verify_controller
 from app.db.session import init_db
 
@@ -64,6 +65,7 @@ async def lifespan(app: FastAPI):
     set_tenant_controller(container.tenant_controller)
     set_role_controller(container.role_controller)
     set_permission_controller(container.permission_controller)
+    set_user_admin_controller(container.user_admin_controller)
 
     # Ensure default admin user exists
     try:
@@ -85,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(tenant_router, prefix=API_V1_PREFIX)
     app.include_router(role_router, prefix=API_V1_PREFIX)
     app.include_router(permission_router, prefix=API_V1_PREFIX)
+    app.include_router(user_admin_router, prefix=API_V1_PREFIX)
 
     _register_legacy_routers(app)
 

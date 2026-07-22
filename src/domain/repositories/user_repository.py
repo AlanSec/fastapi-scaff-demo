@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+﻿from abc import ABC, abstractmethod
 from typing import Optional, List
 from uuid import UUID
 
@@ -28,6 +28,10 @@ class UserRepository(ABC):
     ) -> List[User]:
         pass
     
+    @abstractmethod
+    async def find_all(self, skip: int = 0, limit: int = 100) -> List[User]:
+        pass
+
     @abstractmethod
     async def delete(self, user_id: UUID) -> bool:
         pass

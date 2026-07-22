@@ -1,0 +1,104 @@
+"""User Admin Routes"""
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from uuid import UUID
+
+from src.api.controllers.user_admin_controller import UserAdminController
+from src.api.schemas.user_admin_schema import (
+    AdminCreateUserRequest,
+    AdminUpdateUserRequest,
+    AdminUpdateCurrentUserRequest,
+    UserAdminResponse,
+    UserAdminListResponse,
+)
+from src.api.middleware.auth_dependencies import get_current_active_user, get_current_active_superuser
+from src.domain.entities.user import User
+
+
+_controller: Optional[UserAdminController] = None
+
+
+def set_user_admin_controller(controller: UserAdminController):
+    global _controller
+    _controller = controller
+
+
+def get_user_admin_controller() -> UserAdminController:
+    if _controller is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="User admin controller not initialized",
+        )
+    return _controller
+
+
+user_admin_router = APIRouter(prefix="/user", tags=["users"])
+
+
+@user_admin_router.get("/me", response_model=UserAdminResponse)
+async def read_user_me(
+    current_user: User = Depends(get_current_active_user),
+    controller: UserAdminController = Depends(get_user_admin_controller),
+):
+    return await controller.get_me(current_user.id)
+
+
+@user_admin_router.put("/me", response_model=UserAdminResponse)
+async def update_user_me(
+    request: AdminUpdateCurrentUserRequest,
+    current_user: User = Depends(get_current_active_user),
+    controller: UserAdminController = Depends(get_user_admin_controller),
+):
+    return await controller.update_me(current_user.id, request)
+
+
+@user_admin_router.get("", response_model=UserAdminListResponse)
+async def read_users(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_active_superuser),
+    controller: UserAdminController = Depends(get_user_admin_controller),
+):
+    return await controller.list(skip=skip, limit=limit)
+
+
+@user_admin_router.post("", response_model=UserAdminResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    request: AdminCreateUserRequest,
+    current_user: User = Depends(get_current_active_superuser),
+    controller: UserAdminController = Depends(get_user_admin_controller),
+):
+    try:
+        return await controller.create(request)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@user_admin_router.get("/{user_id}", response_model=UserAdminResponse)
+async def read_user(
+    user_id: UUID,
+    current_user: User = Depends(get_current_active_superuser),
+    controller: UserAdminController = Depends(get_user_admin_controller),
+):
+    return await controller.get_by_id(user_id)
+
+
+@user_admin_router.put("/{user_id}", response_model=UserAdminResponse)
+async def update_user(
+    user_id: UUID,
+    request: AdminUpdateUserRequest,
+    current_user: User = Depends(get_current_active_superuser),
+    controller: UserAdminController = Depends(get_user_admin_controller),
+):
+    return await controller.update(user_id, request)
+
+
+@user_admin_router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: UUID,
+    current_user: User = Depends(get_current_active_superuser),
+    controller: UserAdminController = Depends(get_user_admin_controller),
+):
+    deleted = await controller.delete(user_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

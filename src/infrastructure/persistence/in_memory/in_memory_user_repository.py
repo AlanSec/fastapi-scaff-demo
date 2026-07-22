@@ -57,6 +57,10 @@ class InMemoryUserRepository(UserRepository):
         self._email_index.pop((str(user.email).lower(), user.tenant_id), None)
         return True
     
+    async def find_all(self, skip: int = 0, limit: int = 100) -> List[User]:
+        items = sorted(self._users.values(), key=lambda u: u.created_at, reverse=True)
+        return items[skip:skip + limit]
+
     async def find_by_reset_token(self, token: str) -> Optional[User]:
         """通过重置令牌查找用户"""
         user_id = self._reset_tokens.get(token)

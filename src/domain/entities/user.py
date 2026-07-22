@@ -18,13 +18,15 @@ class User:
     created_at: datetime
     updated_at: datetime
     last_login_at: Optional[datetime] = None
+    is_superuser: bool = False
     
     @classmethod
     def create(
         cls,
         email: Email,
         password: HashedPassword,
-        tenant_id: UUID
+        tenant_id: UUID,
+        is_superuser: bool = False,
     ) -> "User":
         now = datetime.now()
         return cls(
@@ -34,6 +36,7 @@ class User:
             tenant_id=tenant_id,
             is_active=True,
             is_verified=False,
+            is_superuser=is_superuser,
             created_at=now,
             updated_at=now
         )
