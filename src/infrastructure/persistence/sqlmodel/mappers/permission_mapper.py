@@ -17,8 +17,23 @@ class PermissionMapper:
         )
 
     @staticmethod
+    def apply_to_model(model: PermissionModel, entity: Permission) -> PermissionModel:
+        """将权限实体的变更应用到已存在的 PermissionModel（用于更新）"""
+        model.action = entity.action.value
+        model.resource = entity.resource.value
+        model.description = entity.description
+        model.is_active = entity.is_active
+        model.created_at = entity.created_at
+        model.updated_at = entity.updated_at
+        return model
+
+    @staticmethod
     def to_entity(model: PermissionModel) -> Permission:
-        action = PermissionAction(model.action) if model.action in PermissionAction._value2member_map_ else PermissionAction.READ
+        action = (
+            PermissionAction(model.action)
+            if model.action in PermissionAction._value2member_map_
+            else PermissionAction.READ
+        )
         resource = Resource(model.resource) if model.resource in Resource._value2member_map_ else Resource.USER
         return Permission(
             id=model.id,

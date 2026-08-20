@@ -1,13 +1,17 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+import pytest
 from src.application.dto.permission_dto import (
-    CreatePermissionInputDTO, UpdatePermissionInputDTO, PermissionOutputDTO,
+    CreatePermissionInputDTO,
+    PermissionOutputDTO,
+    UpdatePermissionInputDTO,
 )
 from src.application.use_cases.permission_use_case import (
-    CreatePermissionUseCase, ListPermissionsUseCase, UpdatePermissionUseCase,
-    DeletePermissionUseCase, GetPermissionUseCase,
+    CreatePermissionUseCase,
+    DeletePermissionUseCase,
+    ListPermissionsUseCase,
+    UpdatePermissionUseCase,
 )
 from src.domain.entities.permission import Permission, PermissionAction, Resource
 

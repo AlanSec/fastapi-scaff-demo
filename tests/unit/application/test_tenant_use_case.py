@@ -1,13 +1,17 @@
-import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+import pytest
 from src.application.dto.tenant_dto import (
-    CreateTenantInputDTO, UpdateTenantInputDTO, TenantOutputDTO,
+    CreateTenantInputDTO,
+    TenantOutputDTO,
+    UpdateTenantInputDTO,
 )
 from src.application.use_cases.tenant_use_case import (
-    CreateTenantUseCase, ListTenantsUseCase, UpdateTenantUseCase,
-    DeleteTenantUseCase, GetTenantUseCase,
+    CreateTenantUseCase,
+    DeleteTenantUseCase,
+    ListTenantsUseCase,
+    UpdateTenantUseCase,
 )
 from src.domain.entities.tenant import Tenant
 
@@ -78,6 +82,3 @@ class TestDeleteTenantUseCase:
         use_case = DeleteTenantUseCase(tenant_repository=mock_repo)
         assert await use_case.execute(uuid4()) is True
         assert await use_case.execute(uuid4()) is True
-
-
-from unittest.mock import MagicMock

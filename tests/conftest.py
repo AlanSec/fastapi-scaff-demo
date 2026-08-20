@@ -1,10 +1,8 @@
-import pytest
-import pytest_asyncio
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
-from typing import AsyncGenerator
-from datetime import datetime, timedelta, timezone
 
+import pytest
 from src.domain.value_objects.email import Email
 from src.domain.value_objects.password import HashedPassword
 
@@ -23,7 +21,8 @@ def mock_password_hasher():
 
 @pytest.fixture
 def mock_jwt_provider():
-    return AsyncMock()
+    # JWTProvider 的方法是同步的，不能用 AsyncMock
+    return MagicMock()
 
 
 @pytest.fixture

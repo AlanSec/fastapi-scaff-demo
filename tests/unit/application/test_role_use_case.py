@@ -1,13 +1,17 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+import pytest
 from src.application.dto.role_dto import (
-    CreateRoleInputDTO, UpdateRoleInputDTO, RoleOutputDTO,
+    CreateRoleInputDTO,
+    RoleOutputDTO,
+    UpdateRoleInputDTO,
 )
 from src.application.use_cases.role_use_case import (
-    CreateRoleUseCase, ListRolesUseCase, UpdateRoleUseCase,
-    DeleteRoleUseCase, GetRoleUseCase,
+    CreateRoleUseCase,
+    DeleteRoleUseCase,
+    ListRolesUseCase,
+    UpdateRoleUseCase,
 )
 from src.domain.entities.role import Role, RoleName
 
@@ -29,6 +33,20 @@ class TestCreateRoleUseCase:
         assert isinstance(result, RoleOutputDTO)
         assert result.name == "admin"
         mock_repo.save.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_create_role_with_custom_name(self, use_case, mock_repo):
+        """自定义角色名（不再受 RoleName 枚举限制）"""
+        mock_repo.find_by_name.return_value = None
+        dto = CreateRoleInputDTO(name="tenant-manager", description="Custom role", tenant_id=uuid4())
+        result = await use_case.execute(dto)
+        assert result.name == "tenant-manager"
+
+    @pytest.mark.asyncio
+    async def test_create_role_empty_name_raises(self, use_case):
+        dto = CreateRoleInputDTO(name="   ", description="Empty", tenant_id=uuid4())
+        with pytest.raises(ValueError, match="cannot be empty"):
+            await use_case.execute(dto)
 
     @pytest.mark.asyncio
     async def test_create_duplicate_raises(self, use_case, mock_repo):

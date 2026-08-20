@@ -1,18 +1,20 @@
-import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
+import pytest
 from src.api.controllers.auth_controller import AuthController
 from src.api.schemas.auth_schema import (
-    RegisterRequest,
-    RegisterResponse,
     LoginRequest,
     LoginResponse,
+    RefreshTokenRequest,
+    RegisterRequest,
+    RegisterResponse,
     TokenResponse,
 )
-from src.application.use_cases.register_user_use_case import RegisterUserUseCase
+from src.application.dto.auth_dto import LoginUserOutputDTO, RegisterUserOutputDTO
 from src.application.use_cases.login_user_use_case import LoginUserUseCase
-from src.application.dto.auth_dto import RegisterUserOutputDTO, LoginUserOutputDTO
+from src.application.use_cases.refresh_token_use_case import RefreshTokenUseCase
+from src.application.use_cases.register_user_use_case import RegisterUserUseCase
 
 
 class TestAuthController:
@@ -25,10 +27,15 @@ class TestAuthController:
         return AsyncMock(spec=LoginUserUseCase)
 
     @pytest.fixture
-    def controller(self, mock_register_use_case, mock_login_use_case):
+    def mock_refresh_use_case(self):
+        return AsyncMock(spec=RefreshTokenUseCase)
+
+    @pytest.fixture
+    def controller(self, mock_register_use_case, mock_login_use_case, mock_refresh_use_case):
         return AuthController(
             register_use_case=mock_register_use_case,
             login_use_case=mock_login_use_case,
+            refresh_use_case=mock_refresh_use_case,
         )
 
     @pytest.mark.asyncio
@@ -96,3 +103,21 @@ class TestAuthController:
         assert result.access_token == "access_token"
         assert result.refresh_token == "refresh_token"
         assert result.token_type == "bearer"
+
+    @pytest.mark.asyncio
+    async def test_refresh_returns_new_tokens(self, controller, mock_refresh_use_case):
+        mock_refresh_use_case.execute.return_value = LoginUserOutputDTO(
+            user_id=uuid4(),
+            email="test@example.com",
+            tenant_id=uuid4(),
+            access_token="new_access",
+            refresh_token="new_refresh",
+            expires_in=1800,
+        )
+
+        result = await controller.refresh(RefreshTokenRequest(refresh_token="old_refresh"))
+
+        assert isinstance(result, TokenResponse)
+        assert result.access_token == "new_access"
+        assert result.refresh_token == "new_refresh"
+        mock_refresh_use_case.execute.assert_called_once()

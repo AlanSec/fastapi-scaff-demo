@@ -13,7 +13,7 @@ class RoleName(str, Enum):
 @dataclass(frozen=True, eq=True)
 class Role:
     id: UUID
-    name: RoleName
+    name: str
     description: str
     is_active: bool
     tenant_id: UUID = field()
@@ -21,7 +21,7 @@ class Role:
     updated_at: datetime
 
     @classmethod
-    def create(cls, name: RoleName, description: str, tenant_id: UUID | None = None) -> "Role":
+    def create(cls, name: str, description: str, tenant_id: UUID | None = None) -> "Role":
         now = datetime.now()
         return cls(
             id=uuid4(),
@@ -54,7 +54,7 @@ class Role:
             updated_at=datetime.now()
         )
 
-    def update_name(self, new_name: RoleName) -> "Role":
+    def update_name(self, new_name: str) -> "Role":
         return replace(
             self,
             name=new_name,

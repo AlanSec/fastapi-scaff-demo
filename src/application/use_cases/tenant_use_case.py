@@ -3,8 +3,8 @@ from typing import List
 
 from src.application.dto.tenant_dto import (
     CreateTenantInputDTO,
-    UpdateTenantInputDTO,
     TenantOutputDTO,
+    UpdateTenantInputDTO,
 )
 from src.domain.entities.tenant import Tenant
 from src.domain.repositories.tenant_repository import TenantRepository

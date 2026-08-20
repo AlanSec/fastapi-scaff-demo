@@ -16,6 +16,16 @@ class TenantMapper:
         )
 
     @staticmethod
+    def apply_to_model(model: TenantModel, entity: Tenant) -> TenantModel:
+        """将租户实体的变更应用到已存在的 TenantModel（用于更新）"""
+        model.name = entity.name
+        model.domain = entity.domain
+        model.is_active = entity.is_active
+        model.created_at = entity.created_at
+        model.updated_at = entity.updated_at
+        return model
+
+    @staticmethod
     def to_entity(model: TenantModel) -> Tenant:
         return Tenant(
             id=model.id,

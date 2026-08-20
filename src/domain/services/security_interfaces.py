@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from uuid import UUID
 
 from src.domain.entities.user import User
-from src.domain.value_objects.password import Password, HashedPassword
+from src.domain.value_objects.password import HashedPassword, Password
 
 
 class PasswordHasher(ABC):
@@ -32,6 +31,18 @@ class JWTProvider(ABC):
     @abstractmethod
     def verify_token(self, token: str) -> Optional[dict]:
         pass
+
+    @abstractmethod
+    def get_access_token_expire_seconds(self) -> int:
+        pass
+
+    @abstractmethod
+    def get_refresh_token_expire_seconds(self) -> int:
+        pass
+
+
+class RateLimitExceeded(Exception):
+    """请求超过速率限制（应映射为 HTTP 429）"""
 
 
 class RateLimiter(ABC):

@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 
 from src.bootstrap.config import settings as new_settings
 from src.bootstrap.container import get_container
@@ -17,7 +17,6 @@ async def ensure_admin_user():
     """
     container = get_container()
 
-    config = container.config
     tenant_repo = container.tenant_repository
     user_repo = container.user_repository
     hasher = container.password_hasher

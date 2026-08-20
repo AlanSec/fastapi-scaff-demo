@@ -1,21 +1,21 @@
 from uuid import UUID
 
+from src.api.schemas.role_schema import (
+    RoleCreateRequest,
+    RoleListResponse,
+    RoleResponse,
+    RoleUpdateRequest,
+)
 from src.application.dto.role_dto import (
     CreateRoleInputDTO,
     UpdateRoleInputDTO,
 )
 from src.application.use_cases.role_use_case import (
     CreateRoleUseCase,
+    DeleteRoleUseCase,
     GetRoleUseCase,
     ListRolesUseCase,
     UpdateRoleUseCase,
-    DeleteRoleUseCase,
-)
-from src.api.schemas.role_schema import (
-    RoleCreateRequest,
-    RoleUpdateRequest,
-    RoleResponse,
-    RoleListResponse,
 )
 
 
@@ -28,12 +28,14 @@ class RoleController:
         list_use_case: ListRolesUseCase,
         update_use_case: UpdateRoleUseCase,
         delete_use_case: DeleteRoleUseCase,
+        assign_to_user_use_case=None,
     ):
         self._create_use_case = create_use_case
         self._get_use_case = get_use_case
         self._list_use_case = list_use_case
         self._update_use_case = update_use_case
         self._delete_use_case = delete_use_case
+        self._assign_to_user_use_case = assign_to_user_use_case
 
     async def create(self, request: RoleCreateRequest) -> RoleResponse:
         dto = CreateRoleInputDTO(
@@ -85,3 +87,8 @@ class RoleController:
 
     async def delete(self, role_id: UUID) -> bool:
         return await self._delete_use_case.execute(role_id)
+
+    async def assign_to_user(self, role_id: UUID, user_id: UUID) -> bool:
+        if self._assign_to_user_use_case is None:
+            raise RuntimeError("assign_to_user use case not initialized")
+        return await self._assign_to_user_use_case.execute(user_id, role_id)

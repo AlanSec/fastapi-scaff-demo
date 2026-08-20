@@ -1,13 +1,11 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock
-
+from src.api.controllers.auth_controller import AuthController
+from src.application.use_cases.login_user_use_case import LoginUserUseCase
+from src.application.use_cases.register_user_use_case import RegisterUserUseCase
 from src.bootstrap.container import Container, get_container
+from src.infrastructure.persistence.sqlmodel.repositories.sqlmodel_user_repository import SQLModelUserRepository
 from src.infrastructure.security.bcrypt_password_hasher import BcryptPasswordHasher
 from src.infrastructure.security.jwt_provider import JWTProviderImpl
-from src.infrastructure.persistence.in_memory.in_memory_user_repository import InMemoryUserRepository
-from src.application.use_cases.register_user_use_case import RegisterUserUseCase
-from src.application.use_cases.login_user_use_case import LoginUserUseCase
-from src.api.controllers.auth_controller import AuthController
 
 
 class TestContainer:
@@ -23,9 +21,16 @@ class TestContainer:
         assert container.jwt_provider is not None
         assert isinstance(container.jwt_provider, JWTProviderImpl)
 
+    def test_container_has_rate_limiter(self, container):
+        from src.infrastructure.security.redis_rate_limiter import RedisRateLimiter
+        assert isinstance(container.rate_limiter, RedisRateLimiter)
+
+    def test_container_has_email_sender(self, container):
+        assert container.email_sender is not None
+
     def test_container_has_user_repository(self, container):
         assert container.user_repository is not None
-        assert isinstance(container.user_repository, InMemoryUserRepository)
+        assert isinstance(container.user_repository, SQLModelUserRepository)
 
     def test_container_has_register_use_case(self, container):
         assert container.register_use_case is not None
@@ -38,6 +43,15 @@ class TestContainer:
     def test_container_has_auth_controller(self, container):
         assert container.auth_controller is not None
         assert isinstance(container.auth_controller, AuthController)
+
+    def test_container_has_all_controllers(self, container):
+        """lifespan 启动时会访问这些 controller，缺失会导致启动崩溃"""
+        assert container.tenant_controller is not None
+        assert container.role_controller is not None
+        assert container.permission_controller is not None
+        assert container.user_admin_controller is not None
+        assert container.password_controller is not None
+        assert container.verify_controller is not None
 
     def test_container_has_config(self, container):
         assert container.config is not None

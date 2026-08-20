@@ -1,13 +1,16 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+import pytest
 from src.application.dto.user_admin_dto import (
-    AdminCreateUserInputDTO, AdminUpdateUserInputDTO, UserAdminOutputDTO,
+    AdminCreateUserInputDTO,
+    UserAdminOutputDTO,
 )
 from src.application.use_cases.user_admin_use_case import (
-    AdminCreateUserUseCase, AdminListUsersUseCase,
-    AdminGetUserUseCase, AdminUpdateUserUseCase, AdminDeleteUserUseCase,
+    AdminCreateUserUseCase,
+    AdminDeleteUserUseCase,
+    AdminGetUserUseCase,
+    AdminListUsersUseCase,
 )
 from src.domain.entities.user import User
 from src.domain.value_objects.email import Email

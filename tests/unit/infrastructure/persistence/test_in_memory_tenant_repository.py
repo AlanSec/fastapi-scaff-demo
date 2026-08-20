@@ -1,6 +1,6 @@
-import pytest
 from uuid import uuid4
 
+import pytest
 from src.domain.entities.tenant import Tenant
 from src.infrastructure.persistence.in_memory.in_memory_tenant_repository import InMemoryTenantRepository
 

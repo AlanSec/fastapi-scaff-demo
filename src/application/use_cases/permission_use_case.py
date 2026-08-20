@@ -4,8 +4,8 @@ from uuid import UUID
 
 from src.application.dto.permission_dto import (
     CreatePermissionInputDTO,
-    UpdatePermissionInputDTO,
     PermissionOutputDTO,
+    UpdatePermissionInputDTO,
 )
 from src.domain.entities.permission import Permission, PermissionAction, Resource
 from src.domain.repositories.permission_repository import PermissionRepository

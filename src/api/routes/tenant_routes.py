@@ -1,32 +1,20 @@
 """Tenant Routes"""
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
 from src.api.controllers.tenant_controller import TenantController
+from src.api.middleware.auth_dependencies import require_permissions
 from src.api.schemas.tenant_schema import (
     TenantCreateRequest,
-    TenantUpdateRequest,
-    TenantResponse,
     TenantListResponse,
+    TenantResponse,
+    TenantUpdateRequest,
 )
-
-
-_controller: Optional[TenantController] = None
-
-
-def set_tenant_controller(controller: TenantController):
-    global _controller
-    _controller = controller
+from src.bootstrap.container import get_container
 
 
 def get_tenant_controller() -> TenantController:
-    if _controller is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Tenant controller not initialized"
-        )
-    return _controller
+    return get_container().tenant_controller
 
 
 tenant_router = APIRouter(prefix="/tenants", tags=["tenants"])
@@ -36,6 +24,7 @@ tenant_router = APIRouter(prefix="/tenants", tags=["tenants"])
 async def create_tenant(
     request: TenantCreateRequest,
     controller: TenantController = Depends(get_tenant_controller),
+    _: str = Depends(require_permissions("tenant:create")),
 ):
     try:
         return await controller.create(request)
@@ -68,6 +57,7 @@ async def update_tenant(
     tenant_id: UUID,
     request: TenantUpdateRequest,
     controller: TenantController = Depends(get_tenant_controller),
+    _: str = Depends(require_permissions("tenant:update")),
 ):
     result = await controller.update(tenant_id, request)
     if result is None:
@@ -79,6 +69,7 @@ async def update_tenant(
 async def delete_tenant(
     tenant_id: UUID,
     controller: TenantController = Depends(get_tenant_controller),
+    _: str = Depends(require_permissions("tenant:delete")),
 ):
     deleted = await controller.delete(tenant_id)
     if not deleted:

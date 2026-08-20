@@ -1,35 +1,31 @@
 """Password Controller - Handles password management endpoints"""
 from uuid import UUID
 
-from src.application.dto.password_dto import (
-    ForgotPasswordInputDTO,
-    ForgotPasswordOutputDTO,
-    ResetPasswordInputDTO,
-    ResetPasswordOutputDTO,
-    ChangePasswordInputDTO,
-    ChangePasswordOutputDTO,
-    VerifyEmailInputDTO,
-    VerifyEmailOutputDTO,
-    ResendVerificationInputDTO,
-    ResendVerificationOutputDTO,
-)
-from src.application.use_cases.password_use_case import (
-    ForgotPasswordUseCase,
-    ResetPasswordUseCase,
-    ChangePasswordUseCase,
-)
 from src.api.schemas.auth_schema import (
-    ForgotPasswordRequest,
-    ForgotPasswordResponse,
-    ResetPasswordRequest,
-    ResetPasswordResponse,
     ChangePasswordRequest,
     ChangePasswordResponse,
-    VerifyEmailRequest,
-    VerifyEmailResponse,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
     ResendVerificationRequest,
     ResendVerificationResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
+    VerifyEmailRequest,
+    VerifyEmailResponse,
 )
+from src.application.dto.password_dto import (
+    ChangePasswordInputDTO,
+    ForgotPasswordInputDTO,
+    ResendVerificationInputDTO,
+    ResetPasswordInputDTO,
+    VerifyEmailInputDTO,
+)
+from src.application.use_cases.password_use_case import (
+    ChangePasswordUseCase,
+    ForgotPasswordUseCase,
+    ResetPasswordUseCase,
+)
+from src.application.use_cases.verify_use_case import ResendVerificationUseCase, VerifyEmailUseCase
 
 
 class PasswordController:
@@ -86,6 +82,3 @@ class VerifyController:
         dto = ResendVerificationInputDTO(email=request.email)
         result = await self._resend_use_case.execute(dto)
         return ResendVerificationResponse(message=result.message)
-
-
-from src.application.use_cases.verify_use_case import VerifyEmailUseCase, ResendVerificationUseCase

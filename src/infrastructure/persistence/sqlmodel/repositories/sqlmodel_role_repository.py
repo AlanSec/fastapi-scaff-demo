@@ -1,60 +1,109 @@
-from typing import Optional, List
+from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.domain.entities.role import Role
 from src.domain.repositories.role_repository import RoleRepository
+from src.infrastructure.persistence.database import session_scope
 from src.infrastructure.persistence.sqlmodel.mappers.role_mapper import RoleMapper
 from src.infrastructure.persistence.sqlmodel.models.role import RoleModel
+from src.infrastructure.persistence.sqlmodel.models.user_role import UserRoleModel
 
 
 class SQLModelRoleRepository(RoleRepository):
 
-    def __init__(self, session: AsyncSession):
-        self._session = session
+    def __init__(self, session_factory):
+        self._session_factory = session_factory
 
     async def save(self, role: Role) -> Role:
-        model = RoleMapper.to_model(role)
-        self._session.add(model)
-        await self._session.commit()
-        await self._session.refresh(model)
-        return RoleMapper.to_entity(model)
+        async with session_scope(self._session_factory) as session:
+            existing = await session.get(RoleModel, role.id)
+            if existing is not None:
+                model = RoleMapper.apply_to_model(existing, role)
+                session.add(model)
+            else:
+                model = RoleMapper.to_model(role)
+                session.add(model)
+            await session.commit()
+            await session.refresh(model)
+            return RoleMapper.to_entity(model)
 
     async def find_by_id(self, role_id: UUID) -> Optional[Role]:
-        model = await self._session.get(RoleModel, role_id)
-        if model is None:
-            return None
-        return RoleMapper.to_entity(model)
+        async with session_scope(self._session_factory) as session:
+            model = await session.get(RoleModel, role_id)
+            if model is None:
+                return None
+            return RoleMapper.to_entity(model)
 
     async def find_by_name(self, name: str, tenant_id: UUID) -> Optional[Role]:
-        result = await self._session.execute(
-            select(RoleModel).where(RoleModel.name == name, RoleModel.tenant_id == tenant_id)
-        )
-        model = result.scalar_one_or_none()
-        if model is None:
-            return None
-        return RoleMapper.to_entity(model)
+        async with session_scope(self._session_factory) as session:
+            result = await session.execute(
+                select(RoleModel).where(RoleModel.name == name, RoleModel.tenant_id == tenant_id)
+            )
+            model = result.scalar_one_or_none()
+            if model is None:
+                return None
+            return RoleMapper.to_entity(model)
 
     async def find_by_tenant(self, tenant_id: UUID) -> List[Role]:
-        result = await self._session.execute(
-            select(RoleModel).where(RoleModel.tenant_id == tenant_id)
-        )
-        models = result.scalars().all()
-        return [RoleMapper.to_entity(m) for m in models]
+        async with session_scope(self._session_factory) as session:
+            result = await session.execute(
+                select(RoleModel).where(RoleModel.tenant_id == tenant_id)
+            )
+            models = result.scalars().all()
+            return [RoleMapper.to_entity(m) for m in models]
 
     async def find_all(self, skip: int = 0, limit: int = 100) -> List[Role]:
-        result = await self._session.execute(
-            select(RoleModel).offset(skip).limit(limit)
-        )
-        models = result.scalars().all()
-        return [RoleMapper.to_entity(m) for m in models]
+        async with session_scope(self._session_factory) as session:
+            result = await session.execute(
+                select(RoleModel).offset(skip).limit(limit)
+            )
+            models = result.scalars().all()
+            return [RoleMapper.to_entity(m) for m in models]
+
+    async def find_by_ids(self, role_ids: List[UUID]) -> List[Role]:
+        """按 ID 批量查询角色（避免 N+1）"""
+        if not role_ids:
+            return []
+        async with session_scope(self._session_factory) as session:
+            result = await session.execute(
+                select(RoleModel).where(RoleModel.id.in_(role_ids))
+            )
+            return [RoleMapper.to_entity(m) for m in result.scalars().all()]
 
     async def delete(self, role_id: UUID) -> bool:
-        model = await self._session.get(RoleModel, role_id)
-        if model is None:
-            return False
-        await self._session.delete(model)
-        await self._session.commit()
-        return True
+        async with session_scope(self._session_factory) as session:
+            model = await session.get(RoleModel, role_id)
+            if model is None:
+                return False
+            await session.delete(model)
+            await session.commit()
+            return True
+
+    async def assign_to_user(self, role_id: UUID, user_id: UUID) -> bool:
+        """将角色分配给用户"""
+        from src.infrastructure.persistence.sqlmodel.models.user import UserModel
+        async with session_scope(self._session_factory) as session:
+            role = await session.get(RoleModel, role_id)
+            user = await session.get(UserModel, user_id)
+            if role is None or user is None:
+                return False
+            existing = await session.execute(
+                select(UserRoleModel).where(
+                    UserRoleModel.role_id == role_id,
+                    UserRoleModel.user_id == user_id,
+                )
+            )
+            if existing.scalar_one_or_none() is not None:
+                return True  # 已分配，幂等
+            session.add(UserRoleModel(role_id=role_id, user_id=user_id))
+            await session.commit()
+            return True
+
+    async def get_user_role_ids(self, user_id: UUID) -> List[UUID]:
+        """查询用户拥有的角色 ID 列表"""
+        async with session_scope(self._session_factory) as session:
+            result = await session.execute(
+                select(UserRoleModel.role_id).where(UserRoleModel.user_id == user_id)
+            )
+            return list(result.scalars().all())

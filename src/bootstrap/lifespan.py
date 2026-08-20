@@ -1,39 +1,34 @@
-﻿import logging
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from src.api.middleware.exception_handlers import (
+    general_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+)
+from src.api.routes.auth_routes import auth_router
+from src.api.routes.password_routes import password_router, verify_router
+from src.api.routes.permission_routes import permission_router
+from src.api.routes.role_routes import role_router
+from src.api.routes.tenant_routes import tenant_router
+from src.api.routes.user_admin_routes import user_admin_router
+from src.bootstrap.container import get_container
+from src.bootstrap.ensure_admin import ensure_admin_user
+from src.infrastructure.persistence.database import init_db
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-from src.api.middleware.exception_handlers import (
-    http_exception_handler,
-    validation_exception_handler,
-    general_exception_handler,
-)
-
 logger = logging.getLogger(__name__)
-
-from src.bootstrap.container import get_container
-from src.bootstrap.ensure_admin import ensure_admin_user
-from src.api.routes.auth_routes import auth_router, set_controller
-from src.api.routes.tenant_routes import tenant_router, set_tenant_controller
-from src.api.routes.role_routes import role_router, set_role_controller
-from src.api.routes.permission_routes import permission_router, set_permission_controller
-from src.api.routes.user_admin_routes import user_admin_router, set_user_admin_controller
-from src.api.routes.password_routes import password_router, verify_router, set_password_controller, set_verify_controller
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    container = get_container()
-    set_controller(container.auth_controller)
-    set_password_controller(container.password_controller)
-    set_verify_controller(container.verify_controller)
-    set_tenant_controller(container.tenant_controller)
-    set_role_controller(container.role_controller)
-    set_permission_controller(container.permission_controller)
-    set_user_admin_controller(container.user_admin_controller)
+    # 建表失败应直接暴露（数据库不可用时应用不应带病启动）
+    await init_db()
 
     try:
         await ensure_admin_user()
@@ -46,14 +41,15 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="FastAPI Enterprise", lifespan=lifespan)
 
+    # CORS 白名单来自配置（CORS_ORIGINS，逗号分隔），避免改代码
+    cors_origins = [
+        o.strip()
+        for o in get_container().config.cors_origins.split(",")
+        if o.strip()
+    ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:8000", "http://localhost:3000",
-            "http://localhost:5173", "http://localhost:5174",
-            "http://127.0.0.1:8000", "http://127.0.0.1:3000",
-            "http://127.0.0.1:5173", "http://127.0.0.1:5174",
-        ],
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -65,7 +61,15 @@ def create_app() -> FastAPI:
             return await call_next(request)
 
     app.add_middleware(RequestLogMiddleware)
+    # 统一错误响应格式（HTTPException / 校验错误 / 未处理异常均带 code 字段）
+    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(Exception, general_exception_handler)
+
+    @app.get("/health", tags=["health"])
+    async def health() -> dict:
+        """健康检查（部署探活用，不鉴权）"""
+        return {"status": "ok"}
 
     API_V1_PREFIX = "/api/v1"
 

@@ -1,6 +1,6 @@
-import pytest
 from abc import ABC
 
+import pytest
 from src.domain.services.interfaces import AuthService, PermissionService
 
 

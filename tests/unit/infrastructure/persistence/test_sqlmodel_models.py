@@ -1,12 +1,11 @@
 """SQLModel 数据模型测试"""
-import pytest
 from datetime import datetime
 from uuid import uuid4
 
-from src.infrastructure.persistence.sqlmodel.models.user import UserModel
-from src.infrastructure.persistence.sqlmodel.models.tenant import TenantModel
-from src.infrastructure.persistence.sqlmodel.models.role import RoleModel
 from src.infrastructure.persistence.sqlmodel.models.permission import PermissionModel
+from src.infrastructure.persistence.sqlmodel.models.role import RoleModel
+from src.infrastructure.persistence.sqlmodel.models.tenant import TenantModel
+from src.infrastructure.persistence.sqlmodel.models.user import UserModel
 
 
 def test_user_model_creation():
@@ -22,7 +21,7 @@ def test_user_model_creation():
         created_at=datetime.now(),
         updated_at=datetime.now(),
     )
-    
+
     assert user.email == "user@example.com"
     assert user.username == "testuser"
     assert user.is_active is True
@@ -38,7 +37,7 @@ def test_tenant_model_creation():
         created_at=datetime.now(),
         updated_at=datetime.now(),
     )
-    
+
     assert tenant.name == "测试租户"
     assert tenant.description == "测试描述"
     assert tenant.is_active is True
@@ -55,7 +54,7 @@ def test_role_model_creation():
         created_at=datetime.now(),
         updated_at=datetime.now(),
     )
-    
+
     assert role.name == "admin"
     assert role.description == "管理员角色"
     assert role.is_active is True
@@ -70,7 +69,7 @@ def test_permission_model_creation():
         description="创建用户权限",
         created_at=datetime.now(),
     )
-    
+
     assert permission.action == "CREATE"
     assert permission.resource == "user"
 

@@ -1,7 +1,7 @@
-import pytest
 from datetime import datetime
 from uuid import UUID, uuid4
 
+import pytest
 from src.domain.entities.user import User
 from src.domain.value_objects.email import Email
 from src.domain.value_objects.password import HashedPassword
@@ -13,7 +13,7 @@ def test_user_creation():
     email = Email("user@example.com")
     password = HashedPassword("hashed_password")
     created_at = datetime.now()
-    
+
     user = User(
         id=user_id,
         email=email,
@@ -24,7 +24,7 @@ def test_user_creation():
         created_at=created_at,
         updated_at=created_at
     )
-    
+
     assert user.id == user_id
     assert user.email == email
     assert user.password == password
@@ -40,13 +40,13 @@ def test_user_create_factory_method():
     email = Email("new@example.com")
     password = HashedPassword("hashed_password")
     tenant_id = uuid4()
-    
+
     user = User.create(
         email=email,
         password=password,
         tenant_id=tenant_id
     )
-    
+
     assert isinstance(user.id, UUID)
     assert user.email == email
     assert user.password == password
@@ -62,9 +62,9 @@ def test_user_verify():
         password=HashedPassword("hashed_password"),
         tenant_id=uuid4()
     )
-    
+
     verified_user = user.verify()
-    
+
     assert verified_user.is_verified is True
     assert verified_user.id == user.id
     assert verified_user.email == user.email
@@ -77,9 +77,9 @@ def test_user_update_last_login():
         password=HashedPassword("hashed_password"),
         tenant_id=uuid4()
     )
-    
+
     updated_user = user.update_last_login()
-    
+
     assert updated_user.last_login_at is not None
     assert user.last_login_at is None
 
@@ -90,9 +90,9 @@ def test_user_deactivate():
         password=HashedPassword("hashed_password"),
         tenant_id=uuid4()
     )
-    
+
     deactivated_user = user.deactivate()
-    
+
     assert deactivated_user.is_active is False
     assert user.is_active is True
 
@@ -104,9 +104,9 @@ def test_user_activate():
         tenant_id=uuid4()
     )
     deactivated = user.deactivate()
-    
+
     activated = deactivated.activate()
-    
+
     assert activated.is_active is True
     assert deactivated.is_active is False
 
@@ -117,10 +117,10 @@ def test_user_immutability():
         password=HashedPassword("hashed_password"),
         tenant_id=uuid4()
     )
-    
+
     with pytest.raises(AttributeError):
         user.is_active = False
-    
+
     with pytest.raises(AttributeError):
         user.email = Email("new@example.com")
 
@@ -131,7 +131,7 @@ def test_user_equality():
     password = HashedPassword("hashed_password")
     tenant_id = uuid4()
     now = datetime.now()
-    
+
     user1 = User(
         id=user_id,
         email=email,
@@ -142,7 +142,7 @@ def test_user_equality():
         created_at=now,
         updated_at=now
     )
-    
+
     user2 = User(
         id=user_id,
         email=email,
@@ -153,12 +153,12 @@ def test_user_equality():
         created_at=now,
         updated_at=now
     )
-    
+
     user3 = User.create(
         email=Email("other@example.com"),
         password=password,
         tenant_id=tenant_id
     )
-    
+
     assert user1 == user2
     assert user1 != user3

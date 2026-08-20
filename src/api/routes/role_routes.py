@@ -1,32 +1,20 @@
 """Role Routes"""
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
 from src.api.controllers.role_controller import RoleController
+from src.api.middleware.auth_dependencies import require_permissions
 from src.api.schemas.role_schema import (
     RoleCreateRequest,
-    RoleUpdateRequest,
-    RoleResponse,
     RoleListResponse,
+    RoleResponse,
+    RoleUpdateRequest,
 )
-
-
-_controller: Optional[RoleController] = None
-
-
-def set_role_controller(controller: RoleController):
-    global _controller
-    _controller = controller
+from src.bootstrap.container import get_container
 
 
 def get_role_controller() -> RoleController:
-    if _controller is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Role controller not initialized"
-        )
-    return _controller
+    return get_container().role_controller
 
 
 role_router = APIRouter(prefix="/roles", tags=["roles"])
@@ -36,6 +24,7 @@ role_router = APIRouter(prefix="/roles", tags=["roles"])
 async def create_role(
     request: RoleCreateRequest,
     controller: RoleController = Depends(get_role_controller),
+    _: str = Depends(require_permissions("role:create")),
 ):
     try:
         return await controller.create(request)
@@ -68,6 +57,7 @@ async def update_role(
     role_id: UUID,
     request: RoleUpdateRequest,
     controller: RoleController = Depends(get_role_controller),
+    _: str = Depends(require_permissions("role:update")),
 ):
     result = await controller.update(role_id, request)
     if result is None:
@@ -79,7 +69,24 @@ async def update_role(
 async def delete_role(
     role_id: UUID,
     controller: RoleController = Depends(get_role_controller),
+    _: str = Depends(require_permissions("role:delete")),
 ):
     deleted = await controller.delete(role_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+
+
+@role_router.post("/{role_id}/users/{user_id}", status_code=status.HTTP_200_OK)
+async def assign_role_to_user(
+    role_id: UUID,
+    user_id: UUID,
+    controller: RoleController = Depends(get_role_controller),
+    _: str = Depends(require_permissions("role:update")),
+):
+    try:
+        assigned = await controller.assign_to_user(role_id, user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    if not assigned:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role or user not found")
+    return {"assigned": True}

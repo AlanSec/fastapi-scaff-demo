@@ -1,10 +1,9 @@
-import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
-from src.api.routes.auth_routes import auth_router
+import pytest
 from src.api.controllers.auth_controller import AuthController
-from src.api.schemas.auth_schema import RegisterResponse, LoginResponse
+from src.api.routes.auth_routes import auth_router
+from src.api.schemas.auth_schema import LoginResponse, RegisterResponse
 
 
 class TestAuthRoutes:
@@ -44,3 +43,7 @@ class TestAuthRoutes:
     def test_router_has_login_json_endpoint(self):
         routes = [route.path for route in auth_router.routes]
         assert "/auth/login/json" in routes
+
+    def test_router_has_refresh_endpoint(self):
+        routes = [route.path for route in auth_router.routes]
+        assert "/auth/refresh" in routes

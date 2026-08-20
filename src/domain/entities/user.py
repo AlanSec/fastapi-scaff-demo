@@ -19,7 +19,10 @@ class User:
     updated_at: datetime
     last_login_at: Optional[datetime] = None
     is_superuser: bool = False
-    
+    reset_token: Optional[str] = None
+    reset_token_expires_at: Optional[datetime] = None
+    verification_token: Optional[str] = None
+
     @classmethod
     def create(
         cls,
@@ -40,31 +43,61 @@ class User:
             created_at=now,
             updated_at=now
         )
-    
+
     def verify(self) -> "User":
         return replace(
             self,
             is_verified=True,
             updated_at=datetime.now()
         )
-    
+
     def update_last_login(self) -> "User":
         return replace(
             self,
             last_login_at=datetime.now(),
             updated_at=datetime.now()
         )
-    
+
     def deactivate(self) -> "User":
         return replace(
             self,
             is_active=False,
             updated_at=datetime.now()
         )
-    
+
     def activate(self) -> "User":
         return replace(
             self,
             is_active=True,
+            updated_at=datetime.now()
+        )
+
+    def with_reset_token(self, token: str, expires_at: datetime) -> "User":
+        return replace(
+            self,
+            reset_token=token,
+            reset_token_expires_at=expires_at,
+            updated_at=datetime.now()
+        )
+
+    def clear_reset_token(self) -> "User":
+        return replace(
+            self,
+            reset_token=None,
+            reset_token_expires_at=None,
+            updated_at=datetime.now()
+        )
+
+    def with_verification_token(self, token: str) -> "User":
+        return replace(
+            self,
+            verification_token=token,
+            updated_at=datetime.now()
+        )
+
+    def clear_verification_token(self) -> "User":
+        return replace(
+            self,
+            verification_token=None,
             updated_at=datetime.now()
         )

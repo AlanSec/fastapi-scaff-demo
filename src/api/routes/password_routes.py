@@ -1,53 +1,29 @@
 """Password and Verify Routes"""
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 
+from fastapi import APIRouter, Depends
+from src.api.controllers.password_controller import PasswordController, VerifyController
 from src.api.schemas.auth_schema import (
-    ForgotPasswordRequest,
-    ForgotPasswordResponse,
-    ResetPasswordRequest,
-    ResetPasswordResponse,
     ChangePasswordRequest,
     ChangePasswordResponse,
-    VerifyEmailRequest,
-    VerifyEmailResponse,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
     ResendVerificationRequest,
     ResendVerificationResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
+    VerifyEmailRequest,
+    VerifyEmailResponse,
 )
-from src.api.controllers.password_controller import PasswordController, VerifyController
-
-
-_password_controller: Optional[PasswordController] = None
-_verify_controller: Optional[VerifyController] = None
-
-
-def set_password_controller(controller: PasswordController):
-    global _password_controller
-    _password_controller = controller
-
-
-def set_verify_controller(controller: VerifyController):
-    global _verify_controller
-    _verify_controller = controller
+from src.bootstrap.container import get_container
 
 
 def get_password_controller() -> PasswordController:
-    if _password_controller is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Password controller not initialized"
-        )
-    return _password_controller
+    return get_container().password_controller
 
 
 def get_verify_controller() -> VerifyController:
-    if _verify_controller is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Verify controller not initialized"
-        )
-    return _verify_controller
+    return get_container().verify_controller
 
 
 password_router = APIRouter(prefix="/password", tags=["password"])

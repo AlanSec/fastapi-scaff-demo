@@ -1,35 +1,22 @@
 """User Admin Routes"""
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
 from src.api.controllers.user_admin_controller import UserAdminController
+from src.api.middleware.auth_dependencies import get_current_active_superuser, get_current_active_user
 from src.api.schemas.user_admin_schema import (
     AdminCreateUserRequest,
-    AdminUpdateUserRequest,
     AdminUpdateCurrentUserRequest,
-    UserAdminResponse,
+    AdminUpdateUserRequest,
     UserAdminListResponse,
+    UserAdminResponse,
 )
-from src.api.middleware.auth_dependencies import get_current_active_user, get_current_active_superuser
+from src.bootstrap.container import get_container
 from src.domain.entities.user import User
 
 
-_controller: Optional[UserAdminController] = None
-
-
-def set_user_admin_controller(controller: UserAdminController):
-    global _controller
-    _controller = controller
-
-
 def get_user_admin_controller() -> UserAdminController:
-    if _controller is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="User admin controller not initialized",
-        )
-    return _controller
+    return get_container().user_admin_controller
 
 
 user_admin_router = APIRouter(prefix="/user", tags=["users"])

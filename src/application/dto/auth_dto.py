@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 from uuid import UUID
 
 
@@ -7,7 +8,7 @@ class RegisterUserInputDTO:
     """用户注册输入 DTO"""
     email: str
     password: str
-    tenant_id: UUID
+    tenant_id: Optional[UUID] = None
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,12 @@ class LoginUserOutputDTO:
     access_token: str
     refresh_token: str
     expires_in: int
+
+
+@dataclass(frozen=True)
+class RefreshTokenInputDTO:
+    """刷新令牌输入 DTO"""
+    refresh_token: str
 
 
 @dataclass(frozen=True)

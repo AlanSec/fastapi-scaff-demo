@@ -1,15 +1,17 @@
 [project]
 name = "fastapi-scaff-demo"
 version = "0.1.0"
-description = "Add your description here"
+description = "FastAPI multi-tenant RBAC auth scaffold (DDD architecture)"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "alembic",
     "fastapi",
     "bcrypt>=4.0.1,<4.3.0",
     "pydantic",
     "pydantic_settings",
     "python-dotenv",
+    "redis",
     "SQLAlchemy",
     "sqlmodel",
     "starlette",
@@ -18,3 +20,19 @@ dependencies = [
 
 [dependency-groups]
 dev = ["pytest", "pytest-asyncio", "pytest-cov", "httpx", "bcrypt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+asyncio_mode = "strict"
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E402"]

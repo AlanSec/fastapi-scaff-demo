@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import uvicorn
+from src.bootstrap.config import settings
 
 
 logging.basicConfig(
@@ -28,9 +29,9 @@ def main():
     # 注意：必须使用 import string 而不是 app 对象，否则 reload 会失效
     uvicorn.run(
         "src.bootstrap.lifespan:create_app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
+        host=settings.server_host,
+        port=settings.server_port,
+        reload=settings.server_reload,
         log_level="info",
         factory=True,
     )

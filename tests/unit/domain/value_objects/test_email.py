@@ -16,7 +16,7 @@ def test_email_equality():
     email1 = Email("user@example.com")
     email2 = Email("user@example.com")
     email3 = Email("other@example.com")
-    
+
     assert email1 == email2
     assert email1 != email3
     assert hash(email1) == hash(email2)
@@ -29,6 +29,6 @@ def test_email_normalization():
 
 def test_email_is_immutable():
     email = Email("user@example.com")
-    
+
     with pytest.raises(AttributeError):
         email.value = "other@example.com"

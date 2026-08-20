@@ -1,25 +1,25 @@
 from uuid import UUID
 
+from src.api.schemas.user_admin_schema import (
+    AdminCreateUserRequest,
+    AdminUpdateCurrentUserRequest,
+    AdminUpdateUserRequest,
+    UserAdminListResponse,
+    UserAdminResponse,
+)
 from src.application.dto.user_admin_dto import (
     AdminCreateUserInputDTO,
-    AdminUpdateUserInputDTO,
     AdminUpdateCurrentUserInputDTO,
+    AdminUpdateUserInputDTO,
 )
 from src.application.use_cases.user_admin_use_case import (
     AdminCreateUserUseCase,
-    AdminListUsersUseCase,
-    AdminGetUserUseCase,
-    AdminUpdateUserUseCase,
     AdminDeleteUserUseCase,
     AdminGetCurrentUserUseCase,
+    AdminGetUserUseCase,
+    AdminListUsersUseCase,
     AdminUpdateCurrentUserUseCase,
-)
-from src.api.schemas.user_admin_schema import (
-    AdminCreateUserRequest,
-    AdminUpdateUserRequest,
-    AdminUpdateCurrentUserRequest,
-    UserAdminResponse,
-    UserAdminListResponse,
+    AdminUpdateUserUseCase,
 )
 
 

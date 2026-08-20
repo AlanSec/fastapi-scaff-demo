@@ -4,15 +4,15 @@ from uuid import UUID
 
 from src.application.dto.user_admin_dto import (
     AdminCreateUserInputDTO,
-    AdminUpdateUserInputDTO,
     AdminUpdateCurrentUserInputDTO,
+    AdminUpdateUserInputDTO,
     UserAdminOutputDTO,
 )
 from src.domain.entities.user import User
 from src.domain.repositories.user_repository import UserRepository
+from src.domain.services.security_interfaces import PasswordHasher
 from src.domain.value_objects.email import Email
 from src.domain.value_objects.password import Password
-from src.domain.services.security_interfaces import PasswordHasher
 
 
 @dataclass

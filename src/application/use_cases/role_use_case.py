@@ -4,10 +4,10 @@ from uuid import UUID
 
 from src.application.dto.role_dto import (
     CreateRoleInputDTO,
-    UpdateRoleInputDTO,
     RoleOutputDTO,
+    UpdateRoleInputDTO,
 )
-from src.domain.entities.role import Role, RoleName
+from src.domain.entities.role import Role
 from src.domain.repositories.role_repository import RoleRepository
 
 
@@ -16,15 +16,19 @@ class CreateRoleUseCase:
     role_repository: RoleRepository
 
     async def execute(self, dto: CreateRoleInputDTO) -> RoleOutputDTO:
-        existing = await self.role_repository.find_by_name(dto.name, dto.tenant_id)
-        if existing:
-            raise ValueError(f"Role '{dto.name}' already exists in this tenant")
+        name = dto.name.strip()
+        if not name:
+            raise ValueError("Role name cannot be empty")
 
-        role = Role.create(name=RoleName(dto.name), description=dto.description)
+        existing = await self.role_repository.find_by_name(name, dto.tenant_id)
+        if existing:
+            raise ValueError(f"Role '{name}' already exists in this tenant")
+
+        role = Role.create(name=name, description=dto.description)
         await self.role_repository.save(role)
 
         return RoleOutputDTO(
-            id=role.id, name=role.name.value, description=role.description,
+            id=role.id, name=role.name, description=role.description,
             is_active=role.is_active, tenant_id=role.tenant_id,
             created_at=role.created_at, updated_at=role.updated_at,
         )
@@ -39,7 +43,7 @@ class GetRoleUseCase:
         if role is None:
             return None
         return RoleOutputDTO(
-            id=role.id, name=role.name.value, description=role.description,
+            id=role.id, name=role.name, description=role.description,
             is_active=role.is_active, tenant_id=role.tenant_id,
             created_at=role.created_at, updated_at=role.updated_at,
         )
@@ -53,7 +57,7 @@ class ListRolesUseCase:
         roles = await self.role_repository.find_all(skip=skip, limit=limit)
         return [
             RoleOutputDTO(
-                id=r.id, name=r.name.value, description=r.description,
+                id=r.id, name=r.name, description=r.description,
                 is_active=r.is_active, tenant_id=r.tenant_id,
                 created_at=r.created_at, updated_at=r.updated_at,
             )
@@ -71,13 +75,13 @@ class UpdateRoleUseCase:
             return None
 
         if dto.name is not None:
-            role = role.update_name(RoleName(dto.name))
+            role = role.update_name(dto.name.strip())
         if dto.description is not None:
             role = role.update_description(dto.description)
 
         await self.role_repository.save(role)
         return RoleOutputDTO(
-            id=role.id, name=role.name.value, description=role.description,
+            id=role.id, name=role.name, description=role.description,
             is_active=role.is_active, tenant_id=role.tenant_id,
             created_at=role.created_at, updated_at=role.updated_at,
         )

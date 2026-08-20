@@ -6,7 +6,7 @@ class RegisterRequest(BaseModel):
     """用户注册请求"""
     email: EmailStr = Field(..., description="用户邮箱")
     password: str = Field(..., description="密码")
-    tenant_id: str = Field(..., description="租户ID")
+    tenant_id: str | None = Field(None, description="租户ID（为空时自动创建独立租户）")
 
 
 class RegisterResponse(BaseModel):
@@ -38,6 +38,17 @@ class TokenResponse(BaseModel):
     """Token 响应 (兼容旧 API)"""
     access_token: str
     refresh_token: str
+    token_type: str = "bearer"
+
+
+class RefreshTokenRequest(BaseModel):
+    """刷新令牌请求"""
+    refresh_token: str = Field(..., description="刷新令牌")
+
+
+class OAuth2TokenResponse(BaseModel):
+    """OAuth2 令牌响应（RFC 6749）"""
+    access_token: str
     token_type: str = "bearer"
 
 

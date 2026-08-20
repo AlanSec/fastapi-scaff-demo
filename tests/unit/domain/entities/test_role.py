@@ -1,7 +1,7 @@
-﻿import pytest
-from datetime import datetime
+﻿from datetime import datetime
 from uuid import UUID, uuid4
 
+import pytest
 from src.domain.entities.role import Role, RoleName
 
 

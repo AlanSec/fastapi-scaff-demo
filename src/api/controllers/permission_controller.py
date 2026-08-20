@@ -1,21 +1,21 @@
 from uuid import UUID
 
+from src.api.schemas.permission_schema import (
+    PermissionCreateRequest,
+    PermissionListResponse,
+    PermissionResponse,
+    PermissionUpdateRequest,
+)
 from src.application.dto.permission_dto import (
     CreatePermissionInputDTO,
     UpdatePermissionInputDTO,
 )
 from src.application.use_cases.permission_use_case import (
     CreatePermissionUseCase,
+    DeletePermissionUseCase,
     GetPermissionUseCase,
     ListPermissionsUseCase,
     UpdatePermissionUseCase,
-    DeletePermissionUseCase,
-)
-from src.api.schemas.permission_schema import (
-    PermissionCreateRequest,
-    PermissionUpdateRequest,
-    PermissionResponse,
-    PermissionListResponse,
 )
 
 
@@ -28,12 +28,14 @@ class PermissionController:
         list_use_case: ListPermissionsUseCase,
         update_use_case: UpdatePermissionUseCase,
         delete_use_case: DeletePermissionUseCase,
+        assign_to_role_use_case=None,
     ):
         self._create_use_case = create_use_case
         self._get_use_case = get_use_case
         self._list_use_case = list_use_case
         self._update_use_case = update_use_case
         self._delete_use_case = delete_use_case
+        self._assign_to_role_use_case = assign_to_role_use_case
 
     async def create(self, request: PermissionCreateRequest) -> PermissionResponse:
         dto = CreatePermissionInputDTO(
@@ -85,3 +87,8 @@ class PermissionController:
 
     async def delete(self, permission_id: UUID) -> bool:
         return await self._delete_use_case.execute(permission_id)
+
+    async def assign_to_role(self, permission_id: UUID, role_id: UUID) -> bool:
+        if self._assign_to_role_use_case is None:
+            raise RuntimeError("assign_to_role use case not initialized")
+        return await self._assign_to_role_use_case.execute(role_id, permission_id)
