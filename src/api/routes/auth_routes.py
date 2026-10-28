@@ -3,6 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from src.api.controllers.auth_controller import AuthController
+from src.api.middleware.auth_dependencies import rate_limit_by_ip
 from src.api.schemas.auth_schema import (
     LoginRequest,
     LoginResponse,
@@ -13,9 +14,13 @@ from src.api.schemas.auth_schema import (
     TokenResponse,
 )
 from src.bootstrap.container import get_container
-from src.domain.services.security_interfaces import RateLimitExceeded
+from src.domain.exceptions import InvalidCredentialsError
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
+
+# 开放注册防滥用：单 IP 每小时最多 10 次注册
+_REGISTER_IP_LIMIT = 10
+_REGISTER_IP_WINDOW_SECONDS = 3600
 
 
 def _get_controller() -> "AuthController":
@@ -43,12 +48,11 @@ async def _record_failed_login_from_ip(request: Request) -> None:
 @auth_router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     request: RegisterRequest,
+    _: None = Depends(rate_limit_by_ip("register_ip", _REGISTER_IP_LIMIT, _REGISTER_IP_WINDOW_SECONDS)),
     controller: "AuthController" = Depends(_get_controller),
 ):
-    try:
-        return await controller.register(request)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    # 业务错误（邮箱冲突 409 / 输入无效 400）由全局领域异常 handler 映射
+    return await controller.register(request)
 
 
 @auth_router.post("/login", response_model=LoginResponse)
@@ -59,13 +63,10 @@ async def login(
 ):
     try:
         return await controller.login(request)
-    except RateLimitExceeded as e:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e)
-        )
-    except ValueError as e:
+    except InvalidCredentialsError:
+        # 失败尝试按 IP 计数（防跨账号爆破）；状态码由全局 handler 映射 401
         await _record_failed_login_from_ip(http_request)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        raise
 
 
 @auth_router.post("/login/json", response_model=TokenResponse)
@@ -77,13 +78,9 @@ async def login_json(
     try:
         result = await controller.login(request)
         return controller.to_token_response(result)
-    except RateLimitExceeded as e:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e)
-        )
-    except ValueError as e:
+    except InvalidCredentialsError:
         await _record_failed_login_from_ip(http_request)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        raise
 
 
 @auth_router.post("/refresh", response_model=TokenResponse)
@@ -91,10 +88,7 @@ async def refresh(
     request: RefreshTokenRequest,
     controller: "AuthController" = Depends(_get_controller),
 ):
-    try:
-        return await controller.refresh(request)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+    return await controller.refresh(request)
 
 
 async def _default_tenant_id() -> Optional[str]:
@@ -125,8 +119,6 @@ async def oauth2_token(
             LoginRequest(email=username, password=password, tenant_id=resolved_tenant_id)
         )
         return OAuth2TokenResponse(access_token=result.access_token)
-    except RateLimitExceeded as e:
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
-    except ValueError as e:
+    except InvalidCredentialsError:
         await _record_failed_login_from_ip(http_request)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        raise

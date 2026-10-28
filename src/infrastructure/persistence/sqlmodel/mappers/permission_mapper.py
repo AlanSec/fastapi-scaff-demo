@@ -29,12 +29,15 @@ class PermissionMapper:
 
     @staticmethod
     def to_entity(model: PermissionModel) -> Permission:
-        action = (
-            PermissionAction(model.action)
-            if model.action in PermissionAction._value2member_map_
-            else PermissionAction.READ
-        )
-        resource = Resource(model.resource) if model.resource in Resource._value2member_map_ else Resource.USER
+        # 严格校验：数据库中出现未知 action/resource 直接暴露问题，
+        # 而不是静默兜底为 READ/USER（兜底会把数据错误伪装成正常数据）
+        try:
+            action = PermissionAction(model.action)
+            resource = Resource(model.resource)
+        except ValueError:
+            raise ValueError(
+                f"Unknown permission action/resource in DB: {model.action}:{model.resource}"
+            )
         return Permission(
             id=model.id,
             action=action,

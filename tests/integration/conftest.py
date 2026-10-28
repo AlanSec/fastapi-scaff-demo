@@ -69,7 +69,6 @@ async def test_user(default_tenant, db_session: AsyncSession):
     user = UserModel(
         id=uuid4(),
         email="test@example.com",
-        username="testuser",
         hashed_password="$2b$12$hashed",
         tenant_id=default_tenant.id,
         is_active=True,

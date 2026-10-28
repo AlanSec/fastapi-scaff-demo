@@ -55,13 +55,14 @@ class PasswordController:
     async def change_password(
         self,
         request: ChangePasswordRequest,
-        user_id: UUID
+        user_id: UUID,
+        tenant_id: UUID,
     ) -> ChangePasswordResponse:
         dto = ChangePasswordInputDTO(
             current_password=request.current_password,
             new_password=request.new_password
         )
-        result = await self._change_use_case.execute(dto, user_id)
+        result = await self._change_use_case.execute(dto, user_id, tenant_id)
         return ChangePasswordResponse(message=result.message)
 
 

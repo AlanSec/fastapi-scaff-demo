@@ -7,6 +7,7 @@ from src.application.dto.tenant_dto import (
     UpdateTenantInputDTO,
 )
 from src.domain.entities.tenant import Tenant
+from src.domain.exceptions import ConflictError
 from src.domain.repositories.tenant_repository import TenantRepository
 
 
@@ -17,7 +18,7 @@ class CreateTenantUseCase:
     async def execute(self, dto: CreateTenantInputDTO) -> TenantOutputDTO:
         existing = await self.tenant_repository.find_by_name(dto.name)
         if existing:
-            raise ValueError(f"Tenant '{dto.name}' already exists")
+            raise ConflictError(f"Tenant '{dto.name}' already exists")
 
         tenant = Tenant.create(name=dto.name, domain=dto.domain)
         await self.tenant_repository.save(tenant)

@@ -8,7 +8,7 @@ from src.application.use_cases.association_use_case import (
     GetUserRolesUseCase,
 )
 from src.domain.entities.permission import Permission, PermissionAction, Resource
-from src.domain.entities.role import Role, RoleName
+from src.domain.entities.role import Role
 from src.infrastructure.persistence.sqlmodel.repositories.sqlmodel_permission_repository import (
     SQLModelPermissionRepository,
 )
@@ -28,8 +28,8 @@ def role_repo():
 
 async def _seed_rbac(default_tenant, test_user, role_repo, permission_repo):
     """建 2 角色 + 3 权限（1 个停用），角色-用户/权限-角色各分配好"""
-    role_a = Role.create(RoleName.ADMIN, "admin", tenant_id=default_tenant.id)
-    role_b = Role.create(RoleName.USER, "user", tenant_id=default_tenant.id)
+    role_a = Role.create("admin", "admin", tenant_id=default_tenant.id)
+    role_b = Role.create("user", "user", tenant_id=default_tenant.id)
     await role_repo.save(role_a)
     await role_repo.save(role_b)
 
@@ -52,7 +52,9 @@ async def _seed_rbac(default_tenant, test_user, role_repo, permission_repo):
 async def test_get_user_permissions_dedup_and_active_only(default_tenant, test_user, role_repo, permission_repo):
     await _seed_rbac(default_tenant, test_user, role_repo, permission_repo)
 
-    perms = await GetUserPermissionsUseCase(role_repo, permission_repo).execute(test_user.id)
+    perms = await GetUserPermissionsUseCase(role_repo, permission_repo).execute(
+        test_user.id, test_user.tenant_id
+    )
     keys = {f"{p.resource.value}:{p.action.value}" for p in perms}
 
     assert keys == {"tenant:create", "user:read"}  # role:update 已停用，被过滤
@@ -60,7 +62,9 @@ async def test_get_user_permissions_dedup_and_active_only(default_tenant, test_u
 
 @pytest.mark.asyncio
 async def test_get_user_permissions_no_roles(default_tenant, role_repo, permission_repo):
-    perms = await GetUserPermissionsUseCase(role_repo, permission_repo).execute(uuid4())
+    perms = await GetUserPermissionsUseCase(role_repo, permission_repo).execute(
+        uuid4(), default_tenant.id
+    )
     assert perms == []
 
 
@@ -68,15 +72,28 @@ async def test_get_user_permissions_no_roles(default_tenant, role_repo, permissi
 async def test_get_role_permissions_batch(default_tenant, test_user, role_repo, permission_repo):
     role_a, _, p1, p2, _ = await _seed_rbac(default_tenant, test_user, role_repo, permission_repo)
 
-    perms = await GetRolePermissionsUseCase(permission_repo).execute(role_a.id)
+    perms = await GetRolePermissionsUseCase(role_repo, permission_repo).execute(
+        role_a.id, default_tenant.id
+    )
     assert {p.id for p in perms} == {p1.id, p2.id}
+
+
+@pytest.mark.asyncio
+async def test_get_role_permissions_cross_tenant_empty(default_tenant, test_user, role_repo, permission_repo):
+    """跨租户上下文查询角色权限 → 空列表"""
+    role_a, _, p1, p2, _ = await _seed_rbac(default_tenant, test_user, role_repo, permission_repo)
+
+    perms = await GetRolePermissionsUseCase(role_repo, permission_repo).execute(
+        role_a.id, uuid4()
+    )
+    assert perms == []
 
 
 @pytest.mark.asyncio
 async def test_get_user_roles_batch(default_tenant, test_user, role_repo, permission_repo):
     role_a, role_b, _, _, _ = await _seed_rbac(default_tenant, test_user, role_repo, permission_repo)
 
-    roles = await GetUserRolesUseCase(role_repo).execute(test_user.id)
+    roles = await GetUserRolesUseCase(role_repo).execute(test_user.id, default_tenant.id)
     assert {r.id for r in roles} == {role_a.id, role_b.id}
 
 
@@ -94,7 +111,8 @@ async def test_permission_find_by_ids_batch(default_tenant, test_user, role_repo
 async def test_role_find_by_ids_batch(default_tenant, test_user, role_repo, permission_repo):
     role_a, role_b, _, _, _ = await _seed_rbac(default_tenant, test_user, role_repo, permission_repo)
 
-    found = await role_repo.find_by_ids([role_a.id, role_b.id, uuid4()])
+    found = await role_repo.find_by_ids([role_a.id, role_b.id, uuid4()], default_tenant.id)
     assert {r.id for r in found} == {role_a.id, role_b.id}
 
-    assert await role_repo.find_by_ids([]) == []
+    assert await role_repo.find_by_ids([], default_tenant.id) == []
+

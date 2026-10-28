@@ -1,5 +1,5 @@
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
@@ -31,7 +31,7 @@ class User:
         tenant_id: UUID,
         is_superuser: bool = False,
     ) -> "User":
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         return cls(
             id=uuid4(),
             email=email,
@@ -48,28 +48,42 @@ class User:
         return replace(
             self,
             is_verified=True,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )
 
     def update_last_login(self) -> "User":
         return replace(
             self,
-            last_login_at=datetime.now(),
-            updated_at=datetime.now()
+            last_login_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
 
     def deactivate(self) -> "User":
         return replace(
             self,
             is_active=False,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )
 
     def activate(self) -> "User":
         return replace(
             self,
             is_active=True,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
+        )
+
+    def with_email(self, email: Email) -> "User":
+        return replace(
+            self,
+            email=email,
+            updated_at=datetime.now(timezone.utc)
+        )
+
+    def with_superuser(self, is_superuser: bool) -> "User":
+        return replace(
+            self,
+            is_superuser=is_superuser,
+            updated_at=datetime.now(timezone.utc)
         )
 
     def with_reset_token(self, token: str, expires_at: datetime) -> "User":
@@ -77,7 +91,7 @@ class User:
             self,
             reset_token=token,
             reset_token_expires_at=expires_at,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )
 
     def clear_reset_token(self) -> "User":
@@ -85,19 +99,19 @@ class User:
             self,
             reset_token=None,
             reset_token_expires_at=None,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )
 
     def with_verification_token(self, token: str) -> "User":
         return replace(
             self,
             verification_token=token,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )
 
     def clear_verification_token(self) -> "User":
         return replace(
             self,
             verification_token=None,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )

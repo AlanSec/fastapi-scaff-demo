@@ -67,7 +67,7 @@ async def test_save_preserves_superuser_and_maps_all_fields(default_tenant, repo
     )
 
     await repo.save(user)
-    found = await repo.find_by_id(user.id)
+    found = await repo.find_by_id(user.id, user.tenant_id)
 
     assert found is not None
     assert found.is_superuser is True

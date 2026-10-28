@@ -33,9 +33,12 @@ class InMemoryUserRepository(UserRepository):
             self._verification_tokens[user.verification_token] = user.id
         return user
 
-    async def find_by_id(self, user_id: UUID) -> Optional[User]:
-        """通过ID查找用户"""
-        return self._users.get(user_id)
+    async def find_by_id(self, user_id: UUID, tenant_id: UUID) -> Optional[User]:
+        """通过ID查找用户（限定租户，跨租户返回 None）"""
+        user = self._users.get(user_id)
+        if user is None or user.tenant_id != tenant_id:
+            return None
+        return user
 
     async def find_by_email(self, email: str, tenant_id: Optional[UUID]) -> Optional[User]:
         """通过邮箱和租户ID查找用户"""
@@ -61,21 +64,18 @@ class InMemoryUserRepository(UserRepository):
         users = [u for u in self._users.values() if u.tenant_id == tenant_id]
         return users[skip:skip + limit]
 
-    async def delete(self, user_id: UUID) -> bool:
-        """删除用户（清理邮箱与 token 索引）"""
-        if user_id not in self._users:
+    async def delete(self, user_id: UUID, tenant_id: UUID) -> bool:
+        """删除用户（限定租户，跨租户返回 False）"""
+        user = self._users.get(user_id)
+        if user is None or user.tenant_id != tenant_id:
             return False
-        user = self._users.pop(user_id)
+        self._users.pop(user_id)
         self._email_index.pop((str(user.email).lower(), user.tenant_id), None)
         if user.reset_token:
             self._reset_tokens.pop(user.reset_token, None)
         if user.verification_token:
             self._verification_tokens.pop(user.verification_token, None)
         return True
-
-    async def find_all(self, skip: int = 0, limit: int = 100) -> List[User]:
-        items = sorted(self._users.values(), key=lambda u: u.created_at, reverse=True)
-        return items[skip:skip + limit]
 
     async def find_by_reset_token(self, token: str) -> Optional[User]:
         """通过重置令牌查找用户"""

@@ -8,8 +8,7 @@ from uuid import UUID
 class AdminCreateUserInputDTO:
     email: str
     password: str
-    tenant_id: UUID
-    username: str | None = None
+    # 注意：无 tenant_id 字段——用户所属租户由认证上下文决定（UseCase 显式入参）
     is_superuser: bool = False
 
 
@@ -18,7 +17,6 @@ class AdminUpdateUserInputDTO:
     email: str | None = None
     is_active: bool | None = None
     is_superuser: bool | None = None
-    tenant_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -49,4 +47,3 @@ class AssignRoleInputDTO:
 class AssignPermissionInputDTO:
     role_id: UUID
     permission_id: UUID
-    tenant_id: UUID

@@ -18,6 +18,8 @@ class TestSettings:
         assert settings.server_host == "0.0.0.0"
         assert settings.server_port == 8000
         assert settings.server_reload is True
+        assert settings.log_level == "INFO"
+        assert settings.log_file is None
         assert "http://localhost:5173" in settings.cors_origins
         assert settings.require_email_verification is False
 

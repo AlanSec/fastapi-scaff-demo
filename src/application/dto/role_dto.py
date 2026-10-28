@@ -7,7 +7,7 @@ from uuid import UUID
 class CreateRoleInputDTO:
     name: str
     description: str
-    tenant_id: UUID
+    # 注意：无 tenant_id 字段——角色所属租户由认证上下文决定（UseCase 显式入参）
 
 
 @dataclass(frozen=True)

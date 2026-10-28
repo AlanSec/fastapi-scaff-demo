@@ -28,3 +28,9 @@ jobs:
 
       - name: Coverage (src)
         run: pytest --cov=src --cov-report=term-missing tests/ -q
+
+      - name: Verify alembic migration chain
+        run: python scripts/verify_alembic.py
+
+      - name: Smoke test (RBAC full chain)
+        run: python scripts/smoke_test_rbac.py

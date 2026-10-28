@@ -1,5 +1,5 @@
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from src.application.dto.password_dto import (
@@ -11,6 +11,7 @@ from src.application.dto.password_dto import (
     ResetPasswordOutputDTO,
 )
 from src.domain.entities.user import User
+from src.domain.exceptions import InvalidCredentialsError
 from src.domain.repositories.user_repository import UserRepository
 from src.domain.services.email_interfaces import EmailSender
 from src.domain.services.security_interfaces import PasswordHasher
@@ -32,7 +33,7 @@ class ForgotPasswordUseCase:
             return ForgotPasswordOutputDTO(message=GENERIC_FORGOT_MESSAGE)
 
         reset_token = self._generate_reset_token(user)
-        expires_at = datetime.now() + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
         updated_user = user.with_reset_token(reset_token, expires_at)
         await self.user_repository.save(updated_user)
 
@@ -59,17 +60,21 @@ class ResetPasswordUseCase:
         user = await self.user_repository.find_by_reset_token(dto.token)
 
         if user is None or user.reset_token_expires_at is None:
-            raise ValueError("Invalid or expired reset token")
+            raise InvalidCredentialsError("Invalid or expired reset token")
 
-        if datetime.now() > user.reset_token_expires_at:
-            raise ValueError("Invalid or expired reset token")
+        expires_at = user.reset_token_expires_at
+        if expires_at.tzinfo is None:
+            # SQLite 旧数据可能为 naive datetime，统一按 UTC 处理
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > expires_at:
+            raise InvalidCredentialsError("Invalid or expired reset token")
 
         new_password = Password(dto.new_password)
         hashed = self.password_hasher.hash(new_password)
         updated_user = replace(
             user.clear_reset_token(),
             password=hashed,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )
 
         await self.user_repository.save(updated_user)
@@ -85,22 +90,23 @@ class ChangePasswordUseCase:
     async def execute(
         self,
         dto: ChangePasswordInputDTO,
-        user_id: UUID
+        user_id: UUID,
+        tenant_id: UUID,
     ) -> ChangePasswordOutputDTO:
-        user = await self.user_repository.find_by_id(user_id)
+        user = await self.user_repository.find_by_id(user_id, tenant_id)
 
         if user is None:
-            raise ValueError("User not found")
+            raise InvalidCredentialsError("User not found")
 
         if not self.password_hasher.verify(Password(dto.current_password), user.password):
-            raise ValueError("Current password is incorrect")
+            raise InvalidCredentialsError("Current password is incorrect")
 
         new_password = Password(dto.new_password)
         hashed = self.password_hasher.hash(new_password)
         updated_user = replace(
             user,
             password=hashed,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )
 
         await self.user_repository.save(updated_user)

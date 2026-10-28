@@ -12,7 +12,8 @@ class RoleRepository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_id(self, role_id: UUID) -> Optional[Role]:
+    async def find_by_id(self, role_id: UUID, tenant_id: UUID) -> Optional[Role]:
+        """按 ID 查询角色，必须限定在指定租户内（跨租户返回 None）"""
         pass
 
     @abstractmethod
@@ -20,20 +21,20 @@ class RoleRepository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_tenant(self, tenant_id: UUID) -> List[Role]:
+    async def find_by_tenant(
+        self, tenant_id: UUID, skip: int = 0, limit: int = 100
+    ) -> List[Role]:
+        """查询指定租户下的角色（分页）"""
         pass
 
     @abstractmethod
-    async def find_all(self, skip: int = 0, limit: int = 100) -> List[Role]:
+    async def find_by_ids(self, role_ids: List[UUID], tenant_id: UUID) -> List[Role]:
+        """按 ID 批量查询角色（避免 N+1），结果限定在指定租户内"""
         pass
 
     @abstractmethod
-    async def find_by_ids(self, role_ids: List[UUID]) -> List[Role]:
-        """按 ID 批量查询角色（避免 N+1）"""
-        pass
-
-    @abstractmethod
-    async def delete(self, role_id: UUID) -> bool:
+    async def delete(self, role_id: UUID, tenant_id: UUID) -> bool:
+        """删除指定租户内的角色（跨租户返回 False）"""
         pass
 
     @abstractmethod

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from src.application.dto.auth_dto import LoginUserOutputDTO, RefreshTokenInputDTO
+from src.domain.exceptions import InvalidCredentialsError
 from src.domain.repositories.refresh_token_repository import RefreshTokenRepository
 from src.domain.repositories.user_repository import UserRepository
 from src.domain.services.security_interfaces import JWTProvider
@@ -19,35 +20,37 @@ class RefreshTokenUseCase:
 
         # 只接受 type=refresh 的令牌（access token 不能用于刷新）
         if payload is None or payload.get("type") != "refresh":
-            raise ValueError("Invalid refresh token")
+            raise InvalidCredentialsError("Invalid refresh token")
 
         jti = payload.get("jti")
         user_id = payload.get("sub")
-        if jti is None or user_id is None:
-            raise ValueError("Invalid refresh token")
+        tenant_id = payload.get("tenant_id")
+        if jti is None or user_id is None or tenant_id is None:
+            raise InvalidCredentialsError("Invalid refresh token")
 
         # 服务端吊销校验：令牌必须已登记且未被吊销/过期
         stored = await self.refresh_token_repository.find_by_token(jti)
         if stored is None or stored.is_revoked:
-            raise ValueError("Invalid refresh token")
+            raise InvalidCredentialsError("Invalid refresh token")
         expires_at = stored.expires_at
         if expires_at.tzinfo is None:
             # SQLite 等存储返回 naive datetime，统一按 UTC 处理
             expires_at = expires_at.replace(tzinfo=timezone.utc)
         if datetime.now(timezone.utc) > expires_at:
             await self.refresh_token_repository.revoke(jti)
-            raise ValueError("Invalid refresh token")
+            raise InvalidCredentialsError("Invalid refresh token")
 
         try:
-            user = await self.user_repository.find_by_id(UUID(user_id))
+            # 租户一致性：令牌内 tenant_id 与用户实际租户必须一致
+            user = await self.user_repository.find_by_id(UUID(user_id), UUID(tenant_id))
         except (ValueError, TypeError):
-            raise ValueError("Invalid refresh token")
+            raise InvalidCredentialsError("Invalid refresh token")
 
         if user is None:
-            raise ValueError("Invalid refresh token")
+            raise InvalidCredentialsError("Invalid refresh token")
 
         if not user.is_active:
-            raise ValueError("User is inactive")
+            raise InvalidCredentialsError("Invalid credentials")
 
         # 轮换：吊销旧令牌，签发并登记新令牌
         await self.refresh_token_repository.revoke(jti)

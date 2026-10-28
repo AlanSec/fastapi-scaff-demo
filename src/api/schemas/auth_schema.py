@@ -5,7 +5,7 @@ from pydantic import BaseModel, EmailStr, Field
 class RegisterRequest(BaseModel):
     """用户注册请求"""
     email: EmailStr = Field(..., description="用户邮箱")
-    password: str = Field(..., description="密码")
+    password: str = Field(..., min_length=8, max_length=72, description="密码（8-72 字符，bcrypt 上限 72 字节）")
     tenant_id: str | None = Field(None, description="租户ID（为空时自动创建独立租户）")
 
 
@@ -65,7 +65,7 @@ class ForgotPasswordResponse(BaseModel):
 class ResetPasswordRequest(BaseModel):
     """重置密码请求"""
     token: str = Field(..., description="重置令牌")
-    new_password: str = Field(..., description="新密码")
+    new_password: str = Field(..., min_length=8, max_length=72, description="新密码（8-72 字符）")
 
 
 class ResetPasswordResponse(BaseModel):
@@ -76,7 +76,7 @@ class ResetPasswordResponse(BaseModel):
 class ChangePasswordRequest(BaseModel):
     """修改密码请求"""
     current_password: str = Field(..., description="当前密码")
-    new_password: str = Field(..., description="新密码")
+    new_password: str = Field(..., min_length=8, max_length=72, description="新密码（8-72 字符）")
 
 
 class ChangePasswordResponse(BaseModel):

@@ -39,7 +39,7 @@ async def test_save_and_find_user():
     assert saved_user.id == user_id
     assert str(saved_user.email) == "user@example.com"
 
-    found_user = await repository.find_by_id(user_id)
+    found_user = await repository.find_by_id(user_id, tenant_id)
     assert found_user is not None
     assert found_user.id == user_id
 
@@ -91,10 +91,10 @@ async def test_delete_user():
 
     await repository.save(user)
 
-    deleted = await repository.delete(user_id)
+    deleted = await repository.delete(user_id, tenant_id)
     assert deleted is True
 
-    found_user = await repository.find_by_id(user_id)
+    found_user = await repository.find_by_id(user_id, tenant_id)
     assert found_user is None
 
 
@@ -156,7 +156,7 @@ async def test_delete_cleans_token_indexes():
     )
     await repository.save(user)
 
-    await repository.delete(user.id)
+    await repository.delete(user.id, user.tenant_id)
 
     assert await repository.find_by_reset_token("reset_token_2") is None
     assert await repository.find_by_verification_token("verify_token_2") is None

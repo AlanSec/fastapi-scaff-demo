@@ -8,6 +8,7 @@ dependencies = [
     "alembic",
     "fastapi",
     "bcrypt>=4.0.1,<4.3.0",
+    "pyjwt>=2.10",
     "pydantic",
     "pydantic_settings",
     "python-dotenv",

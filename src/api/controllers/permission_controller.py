@@ -88,7 +88,7 @@ class PermissionController:
     async def delete(self, permission_id: UUID) -> bool:
         return await self._delete_use_case.execute(permission_id)
 
-    async def assign_to_role(self, permission_id: UUID, role_id: UUID) -> bool:
+    async def assign_to_role(self, permission_id: UUID, role_id: UUID, tenant_id: UUID) -> bool:
         if self._assign_to_role_use_case is None:
             raise RuntimeError("assign_to_role use case not initialized")
-        return await self._assign_to_role_use_case.execute(role_id, permission_id)
+        return await self._assign_to_role_use_case.execute(role_id, permission_id, tenant_id)

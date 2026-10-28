@@ -1,4 +1,6 @@
 
+from functools import cached_property
+
 from src.api.controllers.auth_controller import AuthController
 from src.api.controllers.password_controller import PasswordController, VerifyController
 from src.api.controllers.permission_controller import PermissionController
@@ -65,480 +67,347 @@ from src.infrastructure.persistence.sqlmodel.repositories.sqlmodel_tenant_reposi
 from src.infrastructure.persistence.sqlmodel.repositories.sqlmodel_user_repository import SQLModelUserRepository
 from src.infrastructure.security.bcrypt_password_hasher import BcryptPasswordHasher
 from src.infrastructure.security.jwt_provider import JWTProviderImpl
+from src.infrastructure.security.permission_cache import PermissionCache
 from src.infrastructure.security.redis_rate_limiter import RedisRateLimiter
 
 
 class Container:
-    _instance = None
+    """手动 DI 容器：cached_property 懒加载单例。
 
-    def __init__(self):
-        if hasattr(self, '_initialized') and self._initialized:
-            return
-        self._initialized = True
-        self._config = None
-        self._password_hasher = None
-        self._jwt_provider = None
-        self._rate_limiter = None
-        self._email_sender = None
-        self._user_repository = None
-        self._refresh_token_repository = None
-        self._register_use_case = None
-        self._login_use_case = None
-        self._refresh_use_case = None
-        self._forgot_password_use_case = None
-        self._reset_password_use_case = None
-        self._change_password_use_case = None
-        self._verify_email_use_case = None
-        self._resend_verification_use_case = None
-        self._auth_controller = None
-        self._password_controller = None
-        self._verify_controller = None
-        self._tenant_repository = None
-        self._role_repository = None
-        self._permission_repository = None
-        self._assign_role_to_user_use_case = None
-        self._assign_permission_to_role_use_case = None
-        self._get_user_roles_use_case = None
-        self._get_role_permissions_use_case = None
-        self._get_user_permissions_use_case = None
-        self._create_tenant_use_case = None
-        self._get_tenant_use_case = None
-        self._list_tenants_use_case = None
-        self._update_tenant_use_case = None
-        self._delete_tenant_use_case = None
-        self._create_role_use_case = None
-        self._get_role_use_case = None
-        self._list_roles_use_case = None
-        self._update_role_use_case = None
-        self._delete_role_use_case = None
-        self._create_permission_use_case = None
-        self._get_permission_use_case = None
-        self._list_permissions_use_case = None
-        self._update_permission_use_case = None
-        self._delete_permission_use_case = None
-        self._tenant_controller = None
-        self._role_controller = None
-        self._permission_controller = None
-        self._admin_create_user_use_case = None
-        self._admin_list_users_use_case = None
-        self._admin_get_user_use_case = None
-        self._admin_update_user_use_case = None
-        self._admin_delete_user_use_case = None
-        self._admin_get_current_user_use_case = None
-        self._admin_update_current_user_use_case = None
-        self._user_admin_controller = None
+    - 每个依赖一个 `@cached_property`，首次访问时构造并缓存
+    - 测试注入：`container.user_repository = X`（覆盖缓存）；`reset()` 清空全部缓存
+    """
 
-    @property
+    def __init__(self) -> None:
+        pass
+
+    def reset(self) -> None:
+        """清空全部懒加载缓存，强制下次访问时重建依赖。
+
+        供测试替换仓储/服务实现使用（替代反射遍历私有属性）。
+        """
+        for key in [k for k in vars(self) if k != "_initialized"]:
+            vars(self).pop(key, None)
+
+    @cached_property
     def config(self) -> Settings:
-        if self._config is None:
-            self._config = Settings()
-        return self._config
+        return Settings()
 
-    @property
+    @cached_property
     def password_hasher(self) -> BcryptPasswordHasher:
-        if self._password_hasher is None:
-            self._password_hasher = BcryptPasswordHasher()
-        return self._password_hasher
+        return BcryptPasswordHasher()
 
-    @property
+    @cached_property
     def jwt_provider(self) -> JWTProviderImpl:
-        if self._jwt_provider is None:
-            self._jwt_provider = JWTProviderImpl(
-                secret_key=self.config.secret_key,
-                algorithm=self.config.algorithm,
-                access_token_expire_minutes=self.config.access_token_expire_minutes,
-                refresh_token_expire_days=self.config.refresh_token_expire_days,
-            )
-        return self._jwt_provider
+        return JWTProviderImpl(
+            secret_key=self.config.secret_key,
+            algorithm=self.config.algorithm,
+            access_token_expire_minutes=self.config.access_token_expire_minutes,
+            refresh_token_expire_days=self.config.refresh_token_expire_days,
+        )
 
-    @property
+    @cached_property
     def rate_limiter(self) -> RedisRateLimiter:
-        if self._rate_limiter is None:
-            self._rate_limiter = RedisRateLimiter.from_url(self.config.redis_url)
-        return self._rate_limiter
+        # 生产环境 fail-closed：Redis 不可用时拒绝放行（防打挂 Redis 绕过限流）
+        return RedisRateLimiter.from_url(
+            self.config.redis_url,
+            fail_closed=self.config.environment == "production",
+        )
 
-    @property
+    @cached_property
     def email_sender(self) -> ConsoleEmailSender:
-        if self._email_sender is None:
-            self._email_sender = ConsoleEmailSender()
-        return self._email_sender
+        return ConsoleEmailSender()
 
-    @property
+    @cached_property
+    def permission_cache(self) -> PermissionCache:
+        return PermissionCache()
+
+    @cached_property
     def user_repository(self) -> SQLModelUserRepository:
-        if self._user_repository is None:
-            self._user_repository = SQLModelUserRepository(async_session_maker)
-        return self._user_repository
+        return SQLModelUserRepository(async_session_maker)
 
-    @property
+    @cached_property
     def tenant_repository(self) -> SQLModelTenantRepository:
-        if self._tenant_repository is None:
-            self._tenant_repository = SQLModelTenantRepository(async_session_maker)
-        return self._tenant_repository
+        return SQLModelTenantRepository(async_session_maker)
 
-    @property
+    @cached_property
     def role_repository(self) -> SQLModelRoleRepository:
-        if self._role_repository is None:
-            self._role_repository = SQLModelRoleRepository(async_session_maker)
-        return self._role_repository
+        return SQLModelRoleRepository(async_session_maker)
 
-    @property
+    @cached_property
     def permission_repository(self) -> SQLModelPermissionRepository:
-        if self._permission_repository is None:
-            self._permission_repository = SQLModelPermissionRepository(async_session_maker)
-        return self._permission_repository
+        return SQLModelPermissionRepository(async_session_maker)
 
-    @property
+    @cached_property
     def refresh_token_repository(self) -> SQLModelRefreshTokenRepository:
-        if self._refresh_token_repository is None:
-            self._refresh_token_repository = SQLModelRefreshTokenRepository(async_session_maker)
-        return self._refresh_token_repository
+        return SQLModelRefreshTokenRepository(async_session_maker)
 
-    @property
+    # ---- Auth ----
+
+    @cached_property
     def register_use_case(self) -> RegisterUserUseCase:
-        if self._register_use_case is None:
-            self._register_use_case = RegisterUserUseCase(
-                user_repository=self.user_repository,
-                password_hasher=self.password_hasher,
-                tenant_repository=self.tenant_repository,
-            )
-        return self._register_use_case
+        return RegisterUserUseCase(
+            user_repository=self.user_repository,
+            password_hasher=self.password_hasher,
+            tenant_repository=self.tenant_repository,
+        )
 
-    @property
+    @cached_property
     def login_use_case(self) -> LoginUserUseCase:
-        if self._login_use_case is None:
-            self._login_use_case = LoginUserUseCase(
-                user_repository=self.user_repository,
-                password_hasher=self.password_hasher,
-                jwt_provider=self.jwt_provider,
-                rate_limiter=self.rate_limiter,
-                refresh_token_repository=self.refresh_token_repository,
-                max_attempts=self.config.max_login_attempts,
-                lockout_window_seconds=self.config.login_lockout_minutes * 60,
-                require_email_verification=self.config.require_email_verification,
-            )
-        return self._login_use_case
+        return LoginUserUseCase(
+            user_repository=self.user_repository,
+            password_hasher=self.password_hasher,
+            jwt_provider=self.jwt_provider,
+            rate_limiter=self.rate_limiter,
+            refresh_token_repository=self.refresh_token_repository,
+            tenant_repository=self.tenant_repository,
+            max_attempts=self.config.max_login_attempts,
+            lockout_window_seconds=self.config.login_lockout_minutes * 60,
+            require_email_verification=self.config.require_email_verification,
+        )
 
-    @property
+    @cached_property
     def refresh_use_case(self) -> RefreshTokenUseCase:
-        if self._refresh_use_case is None:
-            self._refresh_use_case = RefreshTokenUseCase(
-                user_repository=self.user_repository,
-                jwt_provider=self.jwt_provider,
-                refresh_token_repository=self.refresh_token_repository,
-            )
-        return self._refresh_use_case
+        return RefreshTokenUseCase(
+            user_repository=self.user_repository,
+            jwt_provider=self.jwt_provider,
+            refresh_token_repository=self.refresh_token_repository,
+        )
 
-    @property
+    @cached_property
     def forgot_password_use_case(self) -> ForgotPasswordUseCase:
-        if self._forgot_password_use_case is None:
-            self._forgot_password_use_case = ForgotPasswordUseCase(
-                user_repository=self.user_repository,
-                email_sender=self.email_sender,
-            )
-        return self._forgot_password_use_case
+        return ForgotPasswordUseCase(
+            user_repository=self.user_repository,
+            email_sender=self.email_sender,
+        )
 
-    @property
+    @cached_property
     def reset_password_use_case(self) -> ResetPasswordUseCase:
-        if self._reset_password_use_case is None:
-            self._reset_password_use_case = ResetPasswordUseCase(
-                user_repository=self.user_repository,
-                password_hasher=self.password_hasher,
-            )
-        return self._reset_password_use_case
+        return ResetPasswordUseCase(
+            user_repository=self.user_repository,
+            password_hasher=self.password_hasher,
+        )
 
-    @property
+    @cached_property
     def change_password_use_case(self) -> ChangePasswordUseCase:
-        if self._change_password_use_case is None:
-            self._change_password_use_case = ChangePasswordUseCase(
-                user_repository=self.user_repository,
-                password_hasher=self.password_hasher,
-            )
-        return self._change_password_use_case
+        return ChangePasswordUseCase(
+            user_repository=self.user_repository,
+            password_hasher=self.password_hasher,
+        )
 
-    @property
+    @cached_property
     def verify_email_use_case(self) -> VerifyEmailUseCase:
-        if self._verify_email_use_case is None:
-            self._verify_email_use_case = VerifyEmailUseCase(
-                user_repository=self.user_repository,
-            )
-        return self._verify_email_use_case
+        return VerifyEmailUseCase(user_repository=self.user_repository)
 
-    @property
+    @cached_property
     def resend_verification_use_case(self) -> ResendVerificationUseCase:
-        if self._resend_verification_use_case is None:
-            self._resend_verification_use_case = ResendVerificationUseCase(
-                user_repository=self.user_repository,
-                email_sender=self.email_sender,
-            )
-        return self._resend_verification_use_case
+        return ResendVerificationUseCase(
+            user_repository=self.user_repository,
+            email_sender=self.email_sender,
+        )
 
-    @property
+    @cached_property
     def auth_controller(self) -> AuthController:
-        if self._auth_controller is None:
-            self._auth_controller = AuthController(
-                register_use_case=self.register_use_case,
-                login_use_case=self.login_use_case,
-                refresh_use_case=self.refresh_use_case,
-            )
-        return self._auth_controller
+        return AuthController(
+            register_use_case=self.register_use_case,
+            login_use_case=self.login_use_case,
+            refresh_use_case=self.refresh_use_case,
+        )
 
-    @property
+    @cached_property
     def password_controller(self) -> PasswordController:
-        if self._password_controller is None:
-            self._password_controller = PasswordController(
-                forgot_password_use_case=self.forgot_password_use_case,
-                reset_password_use_case=self.reset_password_use_case,
-                change_password_use_case=self.change_password_use_case,
-            )
-        return self._password_controller
+        return PasswordController(
+            forgot_password_use_case=self.forgot_password_use_case,
+            reset_password_use_case=self.reset_password_use_case,
+            change_password_use_case=self.change_password_use_case,
+        )
 
-    @property
+    @cached_property
     def verify_controller(self) -> VerifyController:
-        if self._verify_controller is None:
-            self._verify_controller = VerifyController(
-                verify_use_case=self.verify_email_use_case,
-                resend_use_case=self.resend_verification_use_case,
-            )
-        return self._verify_controller
+        return VerifyController(
+            verify_use_case=self.verify_email_use_case,
+            resend_use_case=self.resend_verification_use_case,
+        )
 
     # ---- Tenant ----
 
-    @property
+    @cached_property
     def create_tenant_use_case(self) -> CreateTenantUseCase:
-        if self._create_tenant_use_case is None:
-            self._create_tenant_use_case = CreateTenantUseCase(self.tenant_repository)
-        return self._create_tenant_use_case
+        return CreateTenantUseCase(self.tenant_repository)
 
-    @property
+    @cached_property
     def get_tenant_use_case(self) -> GetTenantUseCase:
-        if self._get_tenant_use_case is None:
-            self._get_tenant_use_case = GetTenantUseCase(self.tenant_repository)
-        return self._get_tenant_use_case
+        return GetTenantUseCase(self.tenant_repository)
 
-    @property
+    @cached_property
     def list_tenants_use_case(self) -> ListTenantsUseCase:
-        if self._list_tenants_use_case is None:
-            self._list_tenants_use_case = ListTenantsUseCase(self.tenant_repository)
-        return self._list_tenants_use_case
+        return ListTenantsUseCase(self.tenant_repository)
 
-    @property
+    @cached_property
     def update_tenant_use_case(self) -> UpdateTenantUseCase:
-        if self._update_tenant_use_case is None:
-            self._update_tenant_use_case = UpdateTenantUseCase(self.tenant_repository)
-        return self._update_tenant_use_case
+        return UpdateTenantUseCase(self.tenant_repository)
 
-    @property
+    @cached_property
     def delete_tenant_use_case(self) -> DeleteTenantUseCase:
-        if self._delete_tenant_use_case is None:
-            self._delete_tenant_use_case = DeleteTenantUseCase(self.tenant_repository)
-        return self._delete_tenant_use_case
+        return DeleteTenantUseCase(self.tenant_repository)
 
-    @property
+    @cached_property
     def tenant_controller(self) -> TenantController:
-        if self._tenant_controller is None:
-            self._tenant_controller = TenantController(
-                create_use_case=self.create_tenant_use_case,
-                get_use_case=self.get_tenant_use_case,
-                list_use_case=self.list_tenants_use_case,
-                update_use_case=self.update_tenant_use_case,
-                delete_use_case=self.delete_tenant_use_case,
-            )
-        return self._tenant_controller
+        return TenantController(
+            create_use_case=self.create_tenant_use_case,
+            get_use_case=self.get_tenant_use_case,
+            list_use_case=self.list_tenants_use_case,
+            update_use_case=self.update_tenant_use_case,
+            delete_use_case=self.delete_tenant_use_case,
+        )
 
     # ---- Role ----
 
-    @property
+    @cached_property
     def create_role_use_case(self) -> CreateRoleUseCase:
-        if self._create_role_use_case is None:
-            self._create_role_use_case = CreateRoleUseCase(self.role_repository)
-        return self._create_role_use_case
+        return CreateRoleUseCase(self.role_repository)
 
-    @property
+    @cached_property
     def get_role_use_case(self) -> GetRoleUseCase:
-        if self._get_role_use_case is None:
-            self._get_role_use_case = GetRoleUseCase(self.role_repository)
-        return self._get_role_use_case
+        return GetRoleUseCase(self.role_repository)
 
-    @property
+    @cached_property
     def list_roles_use_case(self) -> ListRolesUseCase:
-        if self._list_roles_use_case is None:
-            self._list_roles_use_case = ListRolesUseCase(self.role_repository)
-        return self._list_roles_use_case
+        return ListRolesUseCase(self.role_repository)
 
-    @property
+    @cached_property
     def update_role_use_case(self) -> UpdateRoleUseCase:
-        if self._update_role_use_case is None:
-            self._update_role_use_case = UpdateRoleUseCase(self.role_repository)
-        return self._update_role_use_case
+        return UpdateRoleUseCase(self.role_repository)
 
-    @property
+    @cached_property
     def delete_role_use_case(self) -> DeleteRoleUseCase:
-        if self._delete_role_use_case is None:
-            self._delete_role_use_case = DeleteRoleUseCase(self.role_repository)
-        return self._delete_role_use_case
+        return DeleteRoleUseCase(self.role_repository)
 
     # ---- RBAC 关联 ----
 
-    @property
+    @cached_property
     def assign_role_to_user_use_case(self) -> AssignRoleToUserUseCase:
-        if self._assign_role_to_user_use_case is None:
-            self._assign_role_to_user_use_case = AssignRoleToUserUseCase(
-                user_repository=self.user_repository,
-                role_repository=self.role_repository,
-            )
-        return self._assign_role_to_user_use_case
+        return AssignRoleToUserUseCase(
+            user_repository=self.user_repository,
+            role_repository=self.role_repository,
+        )
 
-    @property
+    @cached_property
     def assign_permission_to_role_use_case(self) -> AssignPermissionToRoleUseCase:
-        if self._assign_permission_to_role_use_case is None:
-            self._assign_permission_to_role_use_case = AssignPermissionToRoleUseCase(
-                role_repository=self.role_repository,
-                permission_repository=self.permission_repository,
-            )
-        return self._assign_permission_to_role_use_case
+        return AssignPermissionToRoleUseCase(
+            role_repository=self.role_repository,
+            permission_repository=self.permission_repository,
+        )
 
-    @property
+    @cached_property
     def get_user_roles_use_case(self) -> GetUserRolesUseCase:
-        if self._get_user_roles_use_case is None:
-            self._get_user_roles_use_case = GetUserRolesUseCase(self.role_repository)
-        return self._get_user_roles_use_case
+        return GetUserRolesUseCase(self.role_repository)
 
-    @property
+    @cached_property
     def get_role_permissions_use_case(self) -> GetRolePermissionsUseCase:
-        if self._get_role_permissions_use_case is None:
-            self._get_role_permissions_use_case = GetRolePermissionsUseCase(self.permission_repository)
-        return self._get_role_permissions_use_case
+        return GetRolePermissionsUseCase(
+            role_repository=self.role_repository,
+            permission_repository=self.permission_repository,
+        )
 
-    @property
+    @cached_property
     def get_user_permissions_use_case(self) -> GetUserPermissionsUseCase:
-        if self._get_user_permissions_use_case is None:
-            self._get_user_permissions_use_case = GetUserPermissionsUseCase(
-                role_repository=self.role_repository,
-                permission_repository=self.permission_repository,
-            )
-        return self._get_user_permissions_use_case
+        return GetUserPermissionsUseCase(
+            role_repository=self.role_repository,
+            permission_repository=self.permission_repository,
+        )
 
-    @property
+    @cached_property
     def role_controller(self) -> RoleController:
-        if self._role_controller is None:
-            self._role_controller = RoleController(
-                create_use_case=self.create_role_use_case,
-                get_use_case=self.get_role_use_case,
-                list_use_case=self.list_roles_use_case,
-                update_use_case=self.update_role_use_case,
-                delete_use_case=self.delete_role_use_case,
-                assign_to_user_use_case=self.assign_role_to_user_use_case,
-            )
-        return self._role_controller
+        return RoleController(
+            create_use_case=self.create_role_use_case,
+            get_use_case=self.get_role_use_case,
+            list_use_case=self.list_roles_use_case,
+            update_use_case=self.update_role_use_case,
+            delete_use_case=self.delete_role_use_case,
+            assign_to_user_use_case=self.assign_role_to_user_use_case,
+        )
 
     # ---- Permission ----
 
-    @property
+    @cached_property
     def create_permission_use_case(self) -> CreatePermissionUseCase:
-        if self._create_permission_use_case is None:
-            self._create_permission_use_case = CreatePermissionUseCase(self.permission_repository)
-        return self._create_permission_use_case
+        return CreatePermissionUseCase(self.permission_repository)
 
-    @property
+    @cached_property
     def get_permission_use_case(self) -> GetPermissionUseCase:
-        if self._get_permission_use_case is None:
-            self._get_permission_use_case = GetPermissionUseCase(self.permission_repository)
-        return self._get_permission_use_case
+        return GetPermissionUseCase(self.permission_repository)
 
-    @property
+    @cached_property
     def list_permissions_use_case(self) -> ListPermissionsUseCase:
-        if self._list_permissions_use_case is None:
-            self._list_permissions_use_case = ListPermissionsUseCase(self.permission_repository)
-        return self._list_permissions_use_case
+        return ListPermissionsUseCase(self.permission_repository)
 
-    @property
+    @cached_property
     def update_permission_use_case(self) -> UpdatePermissionUseCase:
-        if self._update_permission_use_case is None:
-            self._update_permission_use_case = UpdatePermissionUseCase(self.permission_repository)
-        return self._update_permission_use_case
+        return UpdatePermissionUseCase(self.permission_repository)
 
-    @property
+    @cached_property
     def delete_permission_use_case(self) -> DeletePermissionUseCase:
-        if self._delete_permission_use_case is None:
-            self._delete_permission_use_case = DeletePermissionUseCase(self.permission_repository)
-        return self._delete_permission_use_case
+        return DeletePermissionUseCase(self.permission_repository)
 
-    @property
+    @cached_property
     def permission_controller(self) -> PermissionController:
-        if self._permission_controller is None:
-            self._permission_controller = PermissionController(
-                create_use_case=self.create_permission_use_case,
-                get_use_case=self.get_permission_use_case,
-                list_use_case=self.list_permissions_use_case,
-                update_use_case=self.update_permission_use_case,
-                delete_use_case=self.delete_permission_use_case,
-                assign_to_role_use_case=self.assign_permission_to_role_use_case,
-            )
-        return self._permission_controller
+        return PermissionController(
+            create_use_case=self.create_permission_use_case,
+            get_use_case=self.get_permission_use_case,
+            list_use_case=self.list_permissions_use_case,
+            update_use_case=self.update_permission_use_case,
+            delete_use_case=self.delete_permission_use_case,
+            assign_to_role_use_case=self.assign_permission_to_role_use_case,
+        )
 
     # ---- User Admin ----
 
-    @property
+    @cached_property
     def admin_create_user_use_case(self) -> AdminCreateUserUseCase:
-        if self._admin_create_user_use_case is None:
-            self._admin_create_user_use_case = AdminCreateUserUseCase(
-                user_repository=self.user_repository,
-                password_hasher=self.password_hasher,
-            )
-        return self._admin_create_user_use_case
+        return AdminCreateUserUseCase(
+            user_repository=self.user_repository,
+            password_hasher=self.password_hasher,
+        )
 
-    @property
+    @cached_property
     def admin_list_users_use_case(self) -> AdminListUsersUseCase:
-        if self._admin_list_users_use_case is None:
-            self._admin_list_users_use_case = AdminListUsersUseCase(self.user_repository)
-        return self._admin_list_users_use_case
+        return AdminListUsersUseCase(self.user_repository)
 
-    @property
+    @cached_property
     def admin_get_user_use_case(self) -> AdminGetUserUseCase:
-        if self._admin_get_user_use_case is None:
-            self._admin_get_user_use_case = AdminGetUserUseCase(self.user_repository)
-        return self._admin_get_user_use_case
+        return AdminGetUserUseCase(self.user_repository)
 
-    @property
+    @cached_property
     def admin_update_user_use_case(self) -> AdminUpdateUserUseCase:
-        if self._admin_update_user_use_case is None:
-            self._admin_update_user_use_case = AdminUpdateUserUseCase(
-                user_repository=self.user_repository,
-                password_hasher=self.password_hasher,
-            )
-        return self._admin_update_user_use_case
+        return AdminUpdateUserUseCase(
+            user_repository=self.user_repository,
+            password_hasher=self.password_hasher,
+        )
 
-    @property
+    @cached_property
     def admin_delete_user_use_case(self) -> AdminDeleteUserUseCase:
-        if self._admin_delete_user_use_case is None:
-            self._admin_delete_user_use_case = AdminDeleteUserUseCase(self.user_repository)
-        return self._admin_delete_user_use_case
+        return AdminDeleteUserUseCase(self.user_repository)
 
-    @property
+    @cached_property
     def admin_get_current_user_use_case(self) -> AdminGetCurrentUserUseCase:
-        if self._admin_get_current_user_use_case is None:
-            self._admin_get_current_user_use_case = AdminGetCurrentUserUseCase(self.user_repository)
-        return self._admin_get_current_user_use_case
+        return AdminGetCurrentUserUseCase(self.user_repository)
 
-    @property
+    @cached_property
     def admin_update_current_user_use_case(self) -> AdminUpdateCurrentUserUseCase:
-        if self._admin_update_current_user_use_case is None:
-            self._admin_update_current_user_use_case = AdminUpdateCurrentUserUseCase(self.user_repository)
-        return self._admin_update_current_user_use_case
+        return AdminUpdateCurrentUserUseCase(self.user_repository)
 
-    @property
+    @cached_property
     def user_admin_controller(self) -> UserAdminController:
-        if self._user_admin_controller is None:
-            self._user_admin_controller = UserAdminController(
-                create_use_case=self.admin_create_user_use_case,
-                list_use_case=self.admin_list_users_use_case,
-                get_use_case=self.admin_get_user_use_case,
-                update_use_case=self.admin_update_user_use_case,
-                delete_use_case=self.admin_delete_user_use_case,
-                get_current_use_case=self.admin_get_current_user_use_case,
-                update_current_use_case=self.admin_update_current_user_use_case,
-            )
-        return self._user_admin_controller
+        return UserAdminController(
+            create_use_case=self.admin_create_user_use_case,
+            list_use_case=self.admin_list_users_use_case,
+            get_use_case=self.admin_get_user_use_case,
+            update_use_case=self.admin_update_user_use_case,
+            delete_use_case=self.admin_delete_user_use_case,
+            get_current_use_case=self.admin_get_current_user_use_case,
+            update_current_use_case=self.admin_update_current_user_use_case,
+        )
 
 
 _container_instance: Container | None = None

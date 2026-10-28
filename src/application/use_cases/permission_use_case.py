@@ -8,6 +8,7 @@ from src.application.dto.permission_dto import (
     UpdatePermissionInputDTO,
 )
 from src.domain.entities.permission import Permission, PermissionAction, Resource
+from src.domain.exceptions import ConflictError
 from src.domain.repositories.permission_repository import PermissionRepository
 
 
@@ -20,7 +21,7 @@ class CreatePermissionUseCase:
             dto.action, dto.resource
         )
         if existing:
-            raise ValueError(f"Permission '{dto.action}:{dto.resource}' already exists")
+            raise ConflictError(f"Permission '{dto.action}:{dto.resource}' already exists")
 
         permission = Permission.create(
             action=PermissionAction(dto.action),

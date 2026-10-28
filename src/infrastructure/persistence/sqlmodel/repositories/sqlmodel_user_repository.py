@@ -29,21 +29,22 @@ class SQLModelUserRepository(UserRepository):
             await session.refresh(model)
             return UserMapper.to_entity(model)
 
-    async def find_by_id(self, user_id: UUID) -> Optional[User]:
-        """通过ID查找用户"""
+    async def find_by_id(self, user_id: UUID, tenant_id: UUID) -> Optional[User]:
+        """通过ID查找用户（限定租户，跨租户返回 None）"""
         async with session_scope(self._session_factory) as session:
             model = await session.get(UserModel, user_id)
-            if model is None:
+            if model is None or model.tenant_id != tenant_id:
                 return None
             return UserMapper.to_entity(model)
 
     async def find_by_email(self, email: str, tenant_id: Optional[UUID]) -> Optional[User]:
-        """通过邮箱和租户ID查找用户"""
+        """通过邮箱和租户ID查找用户（tenant_id=None 时跨租户取首个匹配）"""
         from sqlalchemy import select
         async with session_scope(self._session_factory) as session:
             query = select(UserModel).where(UserModel.email == email)
             if tenant_id is not None:
                 query = query.where(UserModel.tenant_id == tenant_id)
+            query = query.limit(1)  # 跨租户查找时避免多行抛异常
             result = await session.execute(query)
             model = result.scalar_one_or_none()
             if model is None:
@@ -68,24 +69,15 @@ class SQLModelUserRepository(UserRepository):
             models = result.scalars().all()
             return [UserMapper.to_entity(m) for m in models]
 
-    async def delete(self, user_id: UUID) -> bool:
-        """删除用户"""
+    async def delete(self, user_id: UUID, tenant_id: UUID) -> bool:
+        """删除用户（限定租户，跨租户返回 False）"""
         async with session_scope(self._session_factory) as session:
             model = await session.get(UserModel, user_id)
-            if model is None:
+            if model is None or model.tenant_id != tenant_id:
                 return False
             await session.delete(model)
             await session.commit()
             return True
-
-    async def find_all(self, skip: int = 0, limit: int = 100) -> List[User]:
-        from sqlalchemy import select
-        async with session_scope(self._session_factory) as session:
-            result = await session.execute(
-                select(UserModel).offset(skip).limit(limit)
-            )
-            models = result.scalars().all()
-            return [UserMapper.to_entity(m) for m in models]
 
     async def find_by_reset_token(self, token: str) -> Optional[User]:
         """通过重置令牌查找用户"""

@@ -13,7 +13,6 @@ def test_user_model_creation():
     user = UserModel(
         id=uuid4(),
         email="user@example.com",
-        username="testuser",
         hashed_password="hashed_value",
         tenant_id=uuid4(),
         is_active=True,
@@ -23,7 +22,6 @@ def test_user_model_creation():
     )
 
     assert user.email == "user@example.com"
-    assert user.username == "testuser"
     assert user.is_active is True
 
 

@@ -15,32 +15,47 @@ class InMemoryRoleRepository(RoleRepository):
         self._roles[role.id] = role
         return role
 
-    async def find_by_id(self, role_id: UUID) -> Optional[Role]:
-        return self._roles.get(role_id)
+    async def find_by_id(self, role_id: UUID, tenant_id: UUID) -> Optional[Role]:
+        """按 ID 查询角色（限定租户，跨租户返回 None）"""
+        role = self._roles.get(role_id)
+        if role is None or role.tenant_id != tenant_id:
+            return None
+        return role
 
     async def find_by_name(self, name: str, tenant_id: UUID) -> Optional[Role]:
         for role in self._roles.values():
-            if role.name.value == name and role.tenant_id == tenant_id:
+            if role.name == name and role.tenant_id == tenant_id:
                 return role
         return None
 
-    async def find_by_tenant(self, tenant_id: UUID) -> List[Role]:
-        return [r for r in self._roles.values() if r.tenant_id == tenant_id]
-
-    async def find_all(self, skip: int = 0, limit: int = 100) -> List[Role]:
-        items = sorted(self._roles.values(), key=lambda r: r.created_at, reverse=True)
+    async def find_by_tenant(
+        self, tenant_id: UUID, skip: int = 0, limit: int = 100
+    ) -> List[Role]:
+        """查询指定租户下的角色（分页）"""
+        items = sorted(
+            (r for r in self._roles.values() if r.tenant_id == tenant_id),
+            key=lambda r: r.created_at,
+            reverse=True,
+        )
         return items[skip:skip + limit]
 
-    async def find_by_ids(self, role_ids: List[UUID]) -> List[Role]:
-        """按 ID 批量查询角色（避免 N+1）"""
-        return [self._roles[rid] for rid in role_ids if rid in self._roles]
+    async def find_by_ids(self, role_ids: List[UUID], tenant_id: UUID) -> List[Role]:
+        """按 ID 批量查询角色（避免 N+1），结果限定在指定租户内"""
+        return [
+            self._roles[rid]
+            for rid in role_ids
+            if rid in self._roles and self._roles[rid].tenant_id == tenant_id
+        ]
 
-    async def delete(self, role_id: UUID) -> bool:
-        removed = self._roles.pop(role_id, None) is not None
-        if removed:
-            for user_id, role_ids in self._user_roles.items():
-                role_ids.discard(role_id)
-        return removed
+    async def delete(self, role_id: UUID, tenant_id: UUID) -> bool:
+        """删除指定租户内的角色（跨租户返回 False）"""
+        role = self._roles.get(role_id)
+        if role is None or role.tenant_id != tenant_id:
+            return False
+        self._roles.pop(role_id)
+        for user_id, role_ids in self._user_roles.items():
+            role_ids.discard(role_id)
+        return True
 
     async def assign_to_user(self, role_id: UUID, user_id: UUID) -> bool:
         if role_id not in self._roles:

@@ -2,10 +2,16 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from src.application.dto.auth_dto import LoginUserInputDTO, LoginUserOutputDTO
+from src.domain.exceptions import InvalidCredentialsError
 from src.domain.repositories.refresh_token_repository import RefreshTokenRepository
+from src.domain.repositories.tenant_repository import TenantRepository
 from src.domain.repositories.user_repository import UserRepository
 from src.domain.services.security_interfaces import JWTProvider, PasswordHasher, RateLimiter, RateLimitExceeded
-from src.domain.value_objects.password import Password
+from src.domain.value_objects.password import HashedPassword, Password
+
+# 恒时比较占位哈希：用户不存在时也执行一次 bcrypt verify，
+# 避免响应时间差泄露账号是否存在（计时枚举）。
+_DUMMY_PASSWORD_HASH = "$2b$12$T.jD2D0hjxOguD8PBFe/A.NaLhuaB8T6w9H.eUFnQ6w9w2p5uapf2"
 
 
 @dataclass
@@ -15,6 +21,7 @@ class LoginUserUseCase:
     jwt_provider: JWTProvider
     rate_limiter: RateLimiter
     refresh_token_repository: RefreshTokenRepository
+    tenant_repository: TenantRepository
     max_attempts: int = 5
     lockout_window_seconds: int = 1800
     require_email_verification: bool = False
@@ -29,20 +36,38 @@ class LoginUserUseCase:
         if remaining <= 0:
             raise RateLimitExceeded("Too many login attempts, please try again later")
 
+        # 租户必须存在且激活；失败统一走"凭证错误"路径（防租户枚举）
+        tenant = await self.tenant_repository.find_by_id(dto.tenant_id)
+        if tenant is None or not tenant.is_active:
+            await self.rate_limiter.check_rate_limit(
+                key, self.max_attempts, self.lockout_window_seconds
+            )
+            raise InvalidCredentialsError("Invalid credentials")
+
         user = await self.user_repository.find_by_email(dto.email, dto.tenant_id)
 
-        if not user or not self.password_hasher.verify(Password(dto.password), user.password):
+        if user is None:
+            # 恒时：对占位哈希执行一次 verify（消耗与真实校验相近的时间）
+            self.password_hasher.verify(
+                Password(dto.password), HashedPassword(_DUMMY_PASSWORD_HASH)
+            )
+            await self.rate_limiter.check_rate_limit(
+                key, self.max_attempts, self.lockout_window_seconds
+            )
+            raise InvalidCredentialsError("Invalid credentials")
+
+        if not self.password_hasher.verify(Password(dto.password), user.password):
             # 失败尝试计数；达到阈值后抛限流异常
             await self.rate_limiter.check_rate_limit(
                 key, self.max_attempts, self.lockout_window_seconds
             )
-            raise ValueError("Invalid credentials")
+            raise InvalidCredentialsError("Invalid credentials")
 
         if not user.is_active:
-            raise ValueError("User is inactive")
+            raise InvalidCredentialsError("Invalid credentials")
 
         if self.require_email_verification and not user.is_verified:
-            raise ValueError("Email not verified")
+            raise InvalidCredentialsError("Invalid credentials")
 
         access_token = self.jwt_provider.create_access_token(user)
         refresh_token = self.jwt_provider.create_refresh_token(user)

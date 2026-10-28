@@ -15,7 +15,6 @@ class UserMapper:
         return UserModel(
             id=user.id,
             email=str(user.email),
-            username=str(user.email).split("@")[0],
             hashed_password=user.password.value,
             tenant_id=user.tenant_id,
             is_active=user.is_active,
@@ -33,7 +32,6 @@ class UserMapper:
     def apply_to_model(model: UserModel, user: User) -> UserModel:
         """将 User 实体的变更应用到已存在的 UserModel（用于更新）"""
         model.email = str(user.email)
-        model.username = str(user.email).split("@")[0]
         model.hashed_password = user.password.value
         model.tenant_id = user.tenant_id
         model.is_active = user.is_active

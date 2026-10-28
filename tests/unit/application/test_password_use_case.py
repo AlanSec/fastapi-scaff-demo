@@ -1,6 +1,6 @@
 """密码流程 UseCase 测试——使用真实 InMemory 仓储 + 真实假 hasher，
 确保实体字段不匹配等 bug 能被立即暴露（而非被 MagicMock 掩盖）。"""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -119,7 +119,7 @@ async def test_reset_password_success(repo, hasher, email_sender):
     result = await reset.execute(ResetPasswordInputDTO(token=token, new_password="NewPass456"))
 
     assert result.message == "Password reset successful"
-    updated = await repo.find_by_id(user.id)
+    updated = await repo.find_by_id(user.id, user.tenant_id)
     assert hasher.verify(Password("NewPass456"), updated.password)
     # token 使用后应被清除
     assert await repo.find_by_reset_token(token) is None
@@ -136,7 +136,7 @@ async def test_reset_password_invalid_token(repo, hasher):
 async def test_reset_password_expired_token(repo, hasher):
     user = _make_user(repo)
     user = user.with_reset_token(
-        "reset_expired", datetime.now() - timedelta(minutes=1)
+        "reset_expired", datetime.now(timezone.utc) - timedelta(minutes=1)
     )
     await repo.save(user)
 
@@ -154,10 +154,11 @@ async def test_change_password_success(repo, hasher):
     result = await change.execute(
         ChangePasswordInputDTO(current_password="Password123", new_password="NewPass456"),
         user.id,
+        user.tenant_id,
     )
 
     assert result.message == "Password changed successfully"
-    updated = await repo.find_by_id(user.id)
+    updated = await repo.find_by_id(user.id, user.tenant_id)
     assert hasher.verify(Password("NewPass456"), updated.password)
 
 
@@ -171,6 +172,7 @@ async def test_change_password_wrong_current(repo, hasher):
         await change.execute(
             ChangePasswordInputDTO(current_password="WrongPass1", new_password="NewPass456"),
             user.id,
+            user.tenant_id,
         )
 
 
@@ -180,5 +182,6 @@ async def test_change_password_user_not_found(repo, hasher):
     with pytest.raises(ValueError, match="User not found"):
         await change.execute(
             ChangePasswordInputDTO(current_password="Password123", new_password="NewPass456"),
+            uuid4(),
             uuid4(),
         )

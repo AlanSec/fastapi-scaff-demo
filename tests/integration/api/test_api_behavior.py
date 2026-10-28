@@ -88,6 +88,33 @@ def test_login_rate_limit_returns_429(client):
     assert r.json()["code"] == 429
 
 
+def test_register_rate_limited_by_ip(client):
+    """开放注册防滥用：单 IP 每小时 10 次后返回 429"""
+    tid = get_default_tenant_id(client)
+    for i in range(10):
+        r = client.post(
+            "/api/v1/auth/register",
+            json={"email": f"rl-{i}@example.com", "password": "Password123", "tenant_id": tid},
+        )
+        assert r.status_code == 201, r.text
+
+    r = client.post(
+        "/api/v1/auth/register",
+        json={"email": "rl-over@example.com", "password": "Password123", "tenant_id": tid},
+    )
+    assert r.status_code == 429
+
+
+def test_forgot_password_rate_limited_by_ip(client):
+    """忘记密码防邮件轰炸：单 IP 每小时 5 次后返回 429"""
+    for _ in range(5):
+        r = client.post("/api/v1/password/forgot", json={"email": "nobody@example.com"})
+        assert r.status_code == 200, r.text
+
+    r = client.post("/api/v1/password/forgot", json={"email": "nobody@example.com"})
+    assert r.status_code == 429
+
+
 # ---------- 级联删除 ----------
 
 def test_delete_user_cascades(client):
@@ -121,7 +148,7 @@ def test_delete_tenant_cascades(client):
     r = client.delete(f"/api/v1/tenants/{new_tid}", headers=ah)
     assert r.status_code == 204
 
-    r = client.get(f"/api/v1/tenants/{new_tid}")
+    r = client.get(f"/api/v1/tenants/{new_tid}", headers=ah)
     assert r.status_code == 404
 
 
@@ -129,14 +156,16 @@ def test_delete_role_cascades(client):
     ah = {"Authorization": f"Bearer {admin_token(client)}"}
     tid = get_default_tenant_id(client)
 
-    r = client.post("/api/v1/roles/", json={"name": "doomed-role", "description": "x", "tenant_id": tid}, headers=ah)
+    # 角色创建不再接受 tenant_id（租户取自认证上下文）
+    r = client.post("/api/v1/roles/", json={"name": "doomed-role", "description": "x"}, headers=ah)
     assert r.status_code == 201
     role_id = r.json()["id"]
+    assert r.json()["tenant_id"] == tid
 
     r = client.delete(f"/api/v1/roles/{role_id}", headers=ah)
     assert r.status_code == 204
 
-    r = client.get(f"/api/v1/roles/{role_id}")
+    r = client.get(f"/api/v1/roles/{role_id}", headers=ah)
     assert r.status_code == 404
 
 
@@ -179,8 +208,8 @@ def test_register_without_tenant_creates_personal_tenant(client):
     body = r.json()
     assert body["tenant_id"]
 
-    # 新租户确实存在
-    r = client.get(f"/api/v1/tenants/{body['tenant_id']}")
+    # 新租户确实存在（租户读端点 superuser-only，用 admin 令牌）
+    r = client.get(f"/api/v1/tenants/{body['tenant_id']}", headers={"Authorization": f"Bearer {admin_token(client)}"})
     assert r.status_code == 200
 
     # 该用户可正常登录

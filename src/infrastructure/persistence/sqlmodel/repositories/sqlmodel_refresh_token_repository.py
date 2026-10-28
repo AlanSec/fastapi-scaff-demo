@@ -1,5 +1,5 @@
 """SQLModel 刷新令牌仓储实现"""
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -18,13 +18,12 @@ class SQLModelRefreshTokenRepository(RefreshTokenRepository):
         self._session_factory = session_factory
 
     async def save(self, jti: str, user_id: UUID, expires_at: datetime) -> None:
+        """登记刷新令牌（按 jti）。
+
+        注意：不再在热路径上顺带清理过期记录（DELETE 全表扫会放大写入开销），
+        过期清理由 lifespan 中的后台周期任务调用 delete_expired() 完成。
+        """
         async with session_scope(self._session_factory) as session:
-            # 顺带清理已过期记录，避免表无限增长（每次登录/轮换都会触发）
-            await session.execute(
-                delete(RefreshTokenModel).where(
-                    RefreshTokenModel.expires_at < datetime.now(timezone.utc)
-                )
-            )
             existing = await session.execute(
                 select(RefreshTokenModel).where(RefreshTokenModel.token == jti)
             )

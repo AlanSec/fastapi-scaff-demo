@@ -66,12 +66,18 @@ async def test_delete_expired_removes_only_expired(default_tenant, repo):
 
 
 @pytest.mark.asyncio
-async def test_save_purges_expired_records(default_tenant, repo):
-    """save() 顺带清理过期记录，防止 refresh_tokens 表无限增长"""
+async def test_save_does_not_purge_expired_records(default_tenant, repo):
+    """save() 不再顺带清理过期记录（清理已移出热路径，由 delete_expired 后台任务负责）"""
     now = datetime.now(timezone.utc)
     expired_jti = str(uuid4())
     await repo.save(expired_jti, default_tenant.id, now - timedelta(days=1))
 
     await repo.save(str(uuid4()), default_tenant.id, now + timedelta(days=7))
 
+    # save 不清理：过期记录仍在
+    assert await repo.find_by_token(expired_jti) is not None
+
+    # 显式调用 delete_expired 才清理
+    deleted = await repo.delete_expired(now)
+    assert deleted == 1
     assert await repo.find_by_token(expired_jti) is None

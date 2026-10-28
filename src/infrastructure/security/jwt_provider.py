@@ -44,6 +44,7 @@ class JWTProviderImpl(JWTProvider):
         expire = now + timedelta(days=self._refresh_token_expire_days)
         payload = {
             "sub": str(user.id),
+            "tenant_id": str(user.tenant_id),
             "type": "refresh",
             "jti": str(uuid4()),
             "iat": now,

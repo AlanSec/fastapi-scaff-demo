@@ -33,6 +33,12 @@ class TestLoginUserUseCase:
         return AsyncMock()
 
     @pytest.fixture
+    def mock_tenant_repository(self):
+        repo = AsyncMock()
+        repo.find_by_id.return_value = MagicMock(is_active=True)
+        return repo
+
+    @pytest.fixture
     def use_case(
         self,
         mock_user_repository,
@@ -40,6 +46,7 @@ class TestLoginUserUseCase:
         mock_jwt_provider,
         rate_limiter,
         mock_refresh_token_repository,
+        mock_tenant_repository,
     ):
         return LoginUserUseCase(
             user_repository=mock_user_repository,
@@ -47,6 +54,7 @@ class TestLoginUserUseCase:
             jwt_provider=mock_jwt_provider,
             rate_limiter=rate_limiter,
             refresh_token_repository=mock_refresh_token_repository,
+            tenant_repository=mock_tenant_repository,
         )
 
     @pytest.mark.asyncio
@@ -94,7 +102,31 @@ class TestLoginUserUseCase:
         mock_jwt_provider.create_refresh_token.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_execute_raises_when_user_not_found(self, use_case, mock_user_repository):
+    async def test_execute_raises_when_tenant_missing_or_inactive(
+        self, mock_user_repository, mock_password_hasher, mock_jwt_provider, mock_tenant_repository
+    ):
+        """租户不存在或停用 → 统一 'Invalid credentials'（防租户枚举）"""
+        mock_tenant_repository.find_by_id.return_value = None
+        use_case = LoginUserUseCase(
+            user_repository=mock_user_repository,
+            password_hasher=mock_password_hasher,
+            jwt_provider=mock_jwt_provider,
+            rate_limiter=InMemoryRateLimiter(),
+            refresh_token_repository=AsyncMock(),
+            tenant_repository=mock_tenant_repository,
+        )
+        dto = LoginUserInputDTO(email="test@example.com", password="Password123", tenant_id=uuid4())
+        with pytest.raises(ValueError, match="Invalid credentials"):
+            await use_case.execute(dto)
+
+        # 停用租户同样拒绝
+        mock_tenant_repository.find_by_id.return_value = MagicMock(is_active=False)
+        with pytest.raises(ValueError, match="Invalid credentials"):
+            await use_case.execute(dto)
+
+    @pytest.mark.asyncio
+    async def test_execute_raises_when_user_not_found(self, use_case, mock_user_repository, mock_password_hasher):
+        """用户不存在时仍执行一次 verify（恒时比较，防计时枚举）"""
         mock_user_repository.find_by_email.return_value = None
 
         input_dto = LoginUserInputDTO(
@@ -105,6 +137,8 @@ class TestLoginUserUseCase:
 
         with pytest.raises(ValueError, match="Invalid credentials"):
             await use_case.execute(input_dto)
+        # 恒时：即使账号不存在，hasher.verify 也须被调用一次
+        mock_password_hasher.verify.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_execute_raises_when_password_invalid(self, use_case, mock_user_repository, mock_password_hasher):
@@ -145,7 +179,7 @@ class TestLoginUserUseCase:
             tenant_id=uuid4()
         )
 
-        with pytest.raises(ValueError, match="User is inactive"):
+        with pytest.raises(ValueError, match="Invalid credentials"):
             await use_case.execute(input_dto)
 
     @pytest.mark.asyncio
@@ -155,12 +189,15 @@ class TestLoginUserUseCase:
         """成功登录不消耗失败配额，多次成功登录不应被锁定"""
         from datetime import datetime
         limiter = InMemoryRateLimiter()
+        tenant_repo = AsyncMock()
+        tenant_repo.find_by_id.return_value = MagicMock(is_active=True)
         use_case = LoginUserUseCase(
             user_repository=mock_user_repository,
             password_hasher=mock_password_hasher,
             jwt_provider=mock_jwt_provider,
             rate_limiter=limiter,
             refresh_token_repository=AsyncMock(),
+            tenant_repository=tenant_repo,
             max_attempts=2,
             lockout_window_seconds=3600,
         )
@@ -194,12 +231,15 @@ class TestLoginUserUseCase:
         """达到失败阈值后，即使凭证正确也被锁定（抛 RateLimitExceeded）"""
         from datetime import datetime
         limiter = InMemoryRateLimiter()
+        tenant_repo = AsyncMock()
+        tenant_repo.find_by_id.return_value = MagicMock(is_active=True)
         use_case = LoginUserUseCase(
             user_repository=mock_user_repository,
             password_hasher=mock_password_hasher,
             jwt_provider=mock_jwt_provider,
             rate_limiter=limiter,
             refresh_token_repository=AsyncMock(),
+            tenant_repository=tenant_repo,
             max_attempts=2,
             lockout_window_seconds=3600,
         )
@@ -257,6 +297,7 @@ class TestLoginUserUseCase:
             jwt_provider=mock_jwt_provider,
             rate_limiter=InMemoryRateLimiter(),
             refresh_token_repository=mock_refresh_token_repository,
+            tenant_repository=AsyncMock(),
         )
         dto = LoginUserInputDTO(email="test@example.com", password="Password123", tenant_id=user.tenant_id)
         result = await use_case.execute(dto)
@@ -287,8 +328,9 @@ class TestLoginUserUseCase:
             jwt_provider=mock_jwt_provider,
             rate_limiter=InMemoryRateLimiter(),
             refresh_token_repository=mock_refresh_token_repository,
+            tenant_repository=AsyncMock(),
             require_email_verification=True,
         )
         dto = LoginUserInputDTO(email="test@example.com", password="Password123", tenant_id=user.tenant_id)
-        with pytest.raises(ValueError, match="Email not verified"):
+        with pytest.raises(ValueError, match="Invalid credentials"):
             await use_case.execute(dto)

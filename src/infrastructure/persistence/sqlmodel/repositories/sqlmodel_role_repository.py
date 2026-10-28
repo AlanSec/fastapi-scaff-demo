@@ -28,10 +28,11 @@ class SQLModelRoleRepository(RoleRepository):
             await session.refresh(model)
             return RoleMapper.to_entity(model)
 
-    async def find_by_id(self, role_id: UUID) -> Optional[Role]:
+    async def find_by_id(self, role_id: UUID, tenant_id: UUID) -> Optional[Role]:
+        """按 ID 查询角色（限定租户，跨租户返回 None）"""
         async with session_scope(self._session_factory) as session:
             model = await session.get(RoleModel, role_id)
-            if model is None:
+            if model is None or model.tenant_id != tenant_id:
                 return None
             return RoleMapper.to_entity(model)
 
@@ -45,36 +46,38 @@ class SQLModelRoleRepository(RoleRepository):
                 return None
             return RoleMapper.to_entity(model)
 
-    async def find_by_tenant(self, tenant_id: UUID) -> List[Role]:
+    async def find_by_tenant(
+        self, tenant_id: UUID, skip: int = 0, limit: int = 100
+    ) -> List[Role]:
+        """查询指定租户下的角色（分页）"""
         async with session_scope(self._session_factory) as session:
             result = await session.execute(
-                select(RoleModel).where(RoleModel.tenant_id == tenant_id)
+                select(RoleModel)
+                .where(RoleModel.tenant_id == tenant_id)
+                .offset(skip)
+                .limit(limit)
             )
             models = result.scalars().all()
             return [RoleMapper.to_entity(m) for m in models]
 
-    async def find_all(self, skip: int = 0, limit: int = 100) -> List[Role]:
-        async with session_scope(self._session_factory) as session:
-            result = await session.execute(
-                select(RoleModel).offset(skip).limit(limit)
-            )
-            models = result.scalars().all()
-            return [RoleMapper.to_entity(m) for m in models]
-
-    async def find_by_ids(self, role_ids: List[UUID]) -> List[Role]:
-        """按 ID 批量查询角色（避免 N+1）"""
+    async def find_by_ids(self, role_ids: List[UUID], tenant_id: UUID) -> List[Role]:
+        """按 ID 批量查询角色（避免 N+1），结果限定在指定租户内"""
         if not role_ids:
             return []
         async with session_scope(self._session_factory) as session:
             result = await session.execute(
-                select(RoleModel).where(RoleModel.id.in_(role_ids))
+                select(RoleModel).where(
+                    RoleModel.id.in_(role_ids),
+                    RoleModel.tenant_id == tenant_id,
+                )
             )
             return [RoleMapper.to_entity(m) for m in result.scalars().all()]
 
-    async def delete(self, role_id: UUID) -> bool:
+    async def delete(self, role_id: UUID, tenant_id: UUID) -> bool:
+        """删除指定租户内的角色（跨租户返回 False）"""
         async with session_scope(self._session_factory) as session:
             model = await session.get(RoleModel, role_id)
-            if model is None:
+            if model is None or model.tenant_id != tenant_id:
                 return False
             await session.delete(model)
             await session.commit()

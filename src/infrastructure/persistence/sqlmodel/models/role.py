@@ -3,7 +3,9 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, Relationship, SQLModel
+from src.infrastructure.persistence.sqlmodel.models.time import utcnow
 
 if TYPE_CHECKING:
     from src.infrastructure.persistence.sqlmodel.models.role_permission import RolePermissionModel
@@ -20,8 +22,14 @@ class RoleModel(SQLModel, table=True):
     description: str | None = None
     is_active: bool = Field(default=True)
     tenant_id: UUID = Field(foreign_key="tenants.id")
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(
+        default_factory=utcnow,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=utcnow,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
     tenant: "TenantModel" = Relationship(back_populates="roles")
     users: list["UserRoleModel"] = Relationship(

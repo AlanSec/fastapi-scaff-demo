@@ -12,6 +12,15 @@ def test_password_creation_with_short_password_raises_value_error():
         Password("short")
 
 
+def test_password_over_72_bytes_raises_value_error():
+    """bcrypt 只处理前 72 字节，超长密码必须显式拒绝（防静默截断）"""
+    with pytest.raises(ValueError, match="at most 72 bytes"):
+        Password("Aa1" + "x" * 70)  # 73 字节
+
+    # 恰好 72 字节边界可用
+    Password("Aa1" + "x" * 69)
+
+
 def test_password_creation_with_weak_password_raises_value_error():
     with pytest.raises(ValueError, match="password must contain at least one uppercase"):
         Password("lowercase123")

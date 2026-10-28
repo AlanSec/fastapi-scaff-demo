@@ -53,9 +53,9 @@ class TestCreateApp:
         assert cors
         assert "http://localhost:5173" in cors[0].kwargs["allow_origins"]
 
-    def test_create_app_reads_cors_origins_from_config(self, monkeypatch):
+    def test_create_app_reads_cors_origins_from_config(self):
         container = get_container()
-        monkeypatch.setattr(container, "_config", Settings(cors_origins="https://frontend.example.com"))
+        container.config = Settings(cors_origins="https://frontend.example.com")
 
         app = create_app()
         cors = [m for m in app.user_middleware if m.cls is CORSMiddleware]

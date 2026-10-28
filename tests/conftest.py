@@ -1,60 +1,7 @@
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
+"""全局 pytest 配置。
 
-import pytest
-from src.domain.value_objects.email import Email
-from src.domain.value_objects.password import HashedPassword
+注意：这里只放真正跨测试模块共享的配置/fixture。
+mock 类 fixture 由各测试类自行定义（类作用域优先），全局重复定义是死代码。
+"""
 
 pytest_plugins = ("pytest_asyncio",)
-
-
-@pytest.fixture
-def mock_user_repository():
-    return AsyncMock()
-
-
-@pytest.fixture
-def mock_password_hasher():
-    return MagicMock()
-
-
-@pytest.fixture
-def mock_jwt_provider():
-    # JWTProvider 的方法是同步的，不能用 AsyncMock
-    return MagicMock()
-
-
-@pytest.fixture
-def sample_tenant_id():
-    return uuid4()
-
-
-@pytest.fixture
-def sample_email():
-    return Email("test@example.com")
-
-
-@pytest.fixture
-def sample_password():
-    return "Password123"
-
-
-@pytest.fixture
-def hashed_password():
-    return HashedPassword("")
-
-
-@pytest.fixture
-def utc_now():
-    return datetime.now(timezone.utc)
-
-
-@pytest.fixture
-def future_datetime(utc_now):
-    return utc_now + timedelta(minutes=30)
-
-
-@pytest.fixture
-def past_datetime(utc_now):
-    return utc_now - timedelta(minutes=30)

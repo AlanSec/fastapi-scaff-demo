@@ -1,5 +1,5 @@
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 
@@ -14,7 +14,7 @@ class Tenant:
 
     @classmethod
     def create(cls, name: str, domain: str) -> "Tenant":
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         return cls(
             id=uuid4(),
             name=name,
@@ -28,26 +28,26 @@ class Tenant:
         return replace(
             self,
             is_active=False,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )
 
     def activate(self) -> "Tenant":
         return replace(
             self,
             is_active=True,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )
 
     def update_domain(self, new_domain: str) -> "Tenant":
         return replace(
             self,
             domain=new_domain,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )
 
     def update_name(self, new_name: str) -> "Tenant":
         return replace(
             self,
             name=new_name,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )

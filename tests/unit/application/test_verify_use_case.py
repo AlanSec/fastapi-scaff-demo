@@ -80,7 +80,7 @@ async def test_resend_stores_token_sends_email_and_verify_success(repo, email_se
     verify_result = await verify.execute(VerifyEmailInputDTO(token=token))
     assert verify_result.is_verified is True
 
-    updated = await repo.find_by_id(user.id)
+    updated = await repo.find_by_id(user.id, user.tenant_id)
     assert updated.is_verified is True
     # 验证后 token 应被清除
     assert await repo.find_by_verification_token(token) is None

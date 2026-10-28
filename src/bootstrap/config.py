@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     server_port: int = Field(default=8000, description="服务监听端口")
     server_reload: bool = Field(default=True, description="开发热重载（生产环境建议关闭）")
 
+    # 日志配置（main.py 初始化；相对路径/多进程写文件需自行评估）
+    log_level: str = Field(default="INFO", description="日志级别（DEBUG/INFO/WARNING/ERROR）")
+    log_file: str | None = Field(default=None, description="日志文件路径（None 仅输出控制台）")
+
     # CORS 白名单（逗号分隔；前端部署后把域名加进来）
     cors_origins: str = Field(
         default=(
@@ -42,7 +46,6 @@ class Settings(BaseSettings):
 
     # 管理员配置
     admin_email: str = Field(default="admin@example.com", description="管理员邮箱")
-    admin_username: str = Field(default="admin", description="管理员用户名")
     admin_password: str = Field(default="Admin123456", description="管理员密码")
     admin_is_superuser: bool = Field(default=True, description="管理员是否超级用户")
 

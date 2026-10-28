@@ -13,6 +13,10 @@ class Password:
         if len(password) < 8:
             raise ValueError("password must be at least 8 characters")
 
+        # bcrypt 只处理前 72 字节，超长部分会被静默截断——必须显式拒绝
+        if len(password.encode("utf-8")) > 72:
+            raise ValueError("password must be at most 72 bytes")
+
         if not any(c.isupper() for c in password):
             raise ValueError("password must contain at least one uppercase letter")
 

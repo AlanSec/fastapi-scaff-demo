@@ -43,53 +43,55 @@ class UserAdminController:
         self._get_current_use_case = get_current_use_case
         self._update_current_use_case = update_current_use_case
 
-    async def create(self, request: AdminCreateUserRequest) -> UserAdminResponse:
+    async def create(self, request: AdminCreateUserRequest, tenant_id: UUID) -> UserAdminResponse:
         dto = AdminCreateUserInputDTO(
             email=request.email,
             password=request.password,
-            tenant_id=request.tenant_id,
             is_superuser=request.is_superuser,
         )
-        result = await self._create_use_case.execute(dto)
+        result = await self._create_use_case.execute(dto, tenant_id)
         return self._to_response(result)
 
-    async def list(self, skip: int = 0, limit: int = 100) -> UserAdminListResponse:
-        items = await self._list_use_case.execute(skip=skip, limit=limit)
+    async def list(self, tenant_id: UUID, skip: int = 0, limit: int = 100) -> UserAdminListResponse:
+        items = await self._list_use_case.execute(tenant_id, skip=skip, limit=limit)
         return UserAdminListResponse(
             items=[self._to_response(r) for r in items],
             total=len(items),
         )
 
-    async def get_by_id(self, user_id: UUID) -> UserAdminResponse:
-        result = await self._get_use_case.execute(user_id)
+    async def get_by_id(self, user_id: UUID, tenant_id: UUID) -> UserAdminResponse:
+        result = await self._get_use_case.execute(user_id, tenant_id)
         if result is None:
             from fastapi import HTTPException, status
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         return self._to_response(result)
 
-    async def update(self, user_id: UUID, request: AdminUpdateUserRequest) -> UserAdminResponse:
+    async def update(
+        self, user_id: UUID, request: AdminUpdateUserRequest, tenant_id: UUID
+    ) -> UserAdminResponse:
         dto = AdminUpdateUserInputDTO(
             email=request.email,
             is_active=request.is_active,
             is_superuser=request.is_superuser,
-            tenant_id=request.tenant_id,
         )
-        result = await self._update_use_case.execute(user_id, dto)
+        result = await self._update_use_case.execute(user_id, dto, tenant_id)
         if result is None:
             from fastapi import HTTPException, status
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         return self._to_response(result)
 
-    async def delete(self, user_id: UUID) -> bool:
-        return await self._delete_use_case.execute(user_id)
+    async def delete(self, user_id: UUID, tenant_id: UUID) -> bool:
+        return await self._delete_use_case.execute(user_id, tenant_id)
 
-    async def get_me(self, user_id: UUID) -> UserAdminResponse:
-        result = await self._get_current_use_case.execute(user_id)
+    async def get_me(self, user_id: UUID, tenant_id: UUID) -> UserAdminResponse:
+        result = await self._get_current_use_case.execute(user_id, tenant_id)
         return self._to_response(result)
 
-    async def update_me(self, user_id: UUID, request: AdminUpdateCurrentUserRequest) -> UserAdminResponse:
+    async def update_me(
+        self, user_id: UUID, request: AdminUpdateCurrentUserRequest, tenant_id: UUID
+    ) -> UserAdminResponse:
         dto = AdminUpdateCurrentUserInputDTO(email=request.email)
-        result = await self._update_current_use_case.execute(user_id, dto)
+        result = await self._update_current_use_case.execute(user_id, dto, tenant_id)
         return self._to_response(result)
 
     @staticmethod

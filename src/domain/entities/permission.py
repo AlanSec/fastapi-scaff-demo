@@ -1,5 +1,5 @@
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from uuid import UUID, uuid4
 
@@ -30,7 +30,7 @@ class Permission:
 
     @classmethod
     def create(cls, action: PermissionAction, resource: Resource, description: str) -> "Permission":
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         return cls(
             id=uuid4(),
             action=action,
@@ -52,12 +52,12 @@ class Permission:
         return replace(
             self,
             is_active=False,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )
 
     def activate(self) -> "Permission":
         return replace(
             self,
             is_active=True,
-            updated_at=datetime.now()
+            updated_at=datetime.now(timezone.utc)
         )

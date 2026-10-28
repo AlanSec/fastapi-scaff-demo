@@ -32,27 +32,33 @@ def client(monkeypatch):
     monkeypatch.setattr(lifespan_module, "init_db", _init_test_db)
 
     container = get_container()
-    # 重置容器全部缓存，注入测试库仓储
-    for name in list(vars(container)):
-        if name.startswith("_") and name != "_initialized":
-            setattr(container, name, None)
-    container._user_repository = SQLModelUserRepository(TestingSessionLocal)
-    container._tenant_repository = SQLModelTenantRepository(TestingSessionLocal)
-    container._role_repository = SQLModelRoleRepository(TestingSessionLocal)
-    container._permission_repository = SQLModelPermissionRepository(TestingSessionLocal)
-    container._refresh_token_repository = SQLModelRefreshTokenRepository(TestingSessionLocal)
-    container._rate_limiter = InMemoryRateLimiter()
+    # 重置容器全部缓存，注入测试库仓储（cached_property 可被实例属性覆盖）
+    container.reset()
+    container.user_repository = SQLModelUserRepository(TestingSessionLocal)
+    container.tenant_repository = SQLModelTenantRepository(TestingSessionLocal)
+    container.role_repository = SQLModelRoleRepository(TestingSessionLocal)
+    container.permission_repository = SQLModelPermissionRepository(TestingSessionLocal)
+    container.refresh_token_repository = SQLModelRefreshTokenRepository(TestingSessionLocal)
+    container.rate_limiter = InMemoryRateLimiter()
 
     with TestClient(create_app()) as tc:
         yield tc
 
 
 def get_default_tenant_id(client) -> str:
-    """获取 ensure_admin 创建的默认租户 ID"""
-    r = client.get("/api/v1/tenants")
-    assert r.status_code == 200, r.text
-    items = r.json()["items"] if "items" in r.json() else r.json()
-    return next(t["id"] for t in items if t["name"] == "Default Tenant")
+    """获取 ensure_admin 创建的默认租户 ID。
+
+    直接查测试库仓储而非匿名调用 API——租户读端点已改为 superuser-only，
+    避免测试与冒烟脚本固化"匿名可读租户列表"的不安全行为。
+    """
+    import asyncio
+
+    from src.bootstrap.container import get_container
+
+    container = get_container()
+    tenant = asyncio.run(container.tenant_repository.find_by_name("Default Tenant"))
+    assert tenant is not None, "Default Tenant not found"
+    return str(tenant.id)
 
 
 def admin_token(client) -> str:

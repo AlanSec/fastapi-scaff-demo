@@ -6,6 +6,7 @@ from src.application.dto.password_dto import (
     VerifyEmailInputDTO,
     VerifyEmailOutputDTO,
 )
+from src.domain.exceptions import InvalidCredentialsError
 from src.domain.repositories.user_repository import UserRepository
 from src.domain.services.email_interfaces import EmailSender
 
@@ -20,7 +21,7 @@ class VerifyEmailUseCase:
         user = await self.user_repository.find_by_verification_token(dto.token)
 
         if user is None:
-            raise ValueError("Invalid verification token")
+            raise InvalidCredentialsError("Invalid verification token")
 
         updated_user = user.verify().clear_verification_token()
 

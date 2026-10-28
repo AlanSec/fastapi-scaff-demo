@@ -75,3 +75,28 @@ async def test_degrades_to_memory_when_redis_down(limiter, redis_client):
 async def test_reset_degrades_to_memory(limiter, redis_client):
     redis_client.delete = AsyncMock(side_effect=ConnectionError("no redis"))
     await limiter.reset("login:x")  # 不应抛异常
+
+
+@pytest.mark.asyncio
+async def test_fail_closed_rejects_when_redis_down():
+    """生产模式（fail_closed=True）：Redis 不可用时拒绝放行，不降级内存"""
+    redis_client = AsyncMock()
+    redis_client.eval = AsyncMock(side_effect=ConnectionError("no redis"))
+    redis_client.get = AsyncMock(side_effect=ConnectionError("no redis"))
+    limiter = RedisRateLimiter(redis_client, key_prefix="rl", fail_closed=True)
+
+    # check_rate_limit → False（拒绝请求）
+    assert await limiter.check_rate_limit("login:x", 5, 60) is False
+    # get_remaining → 0（视为锁定）
+    assert await limiter.get_remaining("login:x", 5, 60) == 0
+    # reset 不抛异常
+    await limiter.reset("login:x")
+
+
+@pytest.mark.asyncio
+async def test_fail_closed_still_works_when_redis_up():
+    """fail_closed 只影响降级路径，Redis 正常时行为不变"""
+    redis_client = AsyncMock()
+    redis_client.eval = AsyncMock(return_value=1)
+    limiter = RedisRateLimiter(redis_client, key_prefix="rl", fail_closed=True)
+    assert await limiter.check_rate_limit("login:x", 5, 60) is True

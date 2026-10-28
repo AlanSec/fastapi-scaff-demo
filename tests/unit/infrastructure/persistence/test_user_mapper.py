@@ -53,7 +53,6 @@ def test_model_to_user():
     model = UserModel(
         id=user_id,
         email="user@example.com",
-        username="testuser",
         hashed_password="hashed_value",
         tenant_id=tenant_id,
         is_active=True,

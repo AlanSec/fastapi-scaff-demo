@@ -1,4 +1,5 @@
 """RBAC + 刷新令牌冒烟测试脚本"""
+import asyncio
 import os
 import sys
 
@@ -13,15 +14,22 @@ for f in ("smoke_test.db",):
     if os.path.exists(f):
         os.remove(f)
 
-from fastapi.testclient import TestClient
-from src.bootstrap.lifespan import create_app
+from fastapi.testclient import TestClient  # noqa: E402 - 需先设置环境变量
+from src.bootstrap.container import get_container  # noqa: E402
+from src.bootstrap.lifespan import create_app  # noqa: E402
+
+
+def _default_tenant_id() -> str:
+    """从仓储直查默认租户（API 的 GET /tenants 已改为 superuser-only，不做匿名依赖）"""
+    tenant = asyncio.run(get_container().tenant_repository.find_by_name("Default Tenant"))
+    assert tenant is not None, "Default Tenant not found"
+    return str(tenant.id)
 
 
 def main():
     with TestClient(create_app()) as client:
-        tenants = client.get("/api/v1/tenants").json()
-        items = tenants["items"] if "items" in tenants else tenants
-        tenant_id = next(t["id"] for t in items if t["name"] == "Default Tenant")
+        # 必须在 lifespan 建表 + ensure_admin 之后取租户（且不能匿名调 API）
+        tenant_id = _default_tenant_id()
 
         # 注册普通用户 + admin 登录
         r = client.post("/api/v1/auth/register", json={
@@ -39,10 +47,12 @@ def main():
             "action": "create", "resource": "tenant", "description": "Create tenant"}, headers=ah)
         assert r.status_code == 201, r.text
         perm_id = r.json()["id"]
+        # 角色所属租户由认证上下文决定（不再接受 tenant_id 字段）
         r = client.post("/api/v1/roles/", json={
-            "name": "user", "description": "Can create tenants", "tenant_id": tenant_id}, headers=ah)
+            "name": "user", "description": "Can create tenants"}, headers=ah)
         assert r.status_code == 201, r.text
         role_id = r.json()["id"]
+        assert r.json()["tenant_id"] == tenant_id
         r = client.post(f"/api/v1/permissions/{perm_id}/roles/{role_id}", headers=ah)
         assert r.status_code == 200, r.text
         print("2) admin 创建权限/角色并完成 角色->权限 分配 OK")
@@ -95,7 +105,7 @@ def main():
 
         # 自定义角色名（不再受 RoleName 枚举限制）
         r = client.post("/api/v1/roles/", json={
-            "name": "tenant-manager", "description": "Custom role name", "tenant_id": tenant_id}, headers=ah)
+            "name": "tenant-manager", "description": "Custom role name"}, headers=ah)
         assert r.status_code == 201, r.text
         print("10) 自定义角色名创建成功 OK")
 

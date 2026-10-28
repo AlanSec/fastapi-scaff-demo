@@ -1,0 +1,38 @@
+# 本地/演示编排：api + redis
+# 用法：docker compose up --build
+# 说明：production 模式下限流器 fail-closed（Redis 不可用会拒绝登录类请求），
+#       因此 api 依赖 redis 健康后才启动。
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: production
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-32-bytes-min}
+      DATABASE_URL: sqlite+aiosqlite:////data/app.db
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+    volumes:
+      - app-data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  app-data:

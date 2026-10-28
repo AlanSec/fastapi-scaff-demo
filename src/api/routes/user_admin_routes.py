@@ -27,7 +27,7 @@ async def read_user_me(
     current_user: User = Depends(get_current_active_user),
     controller: UserAdminController = Depends(get_user_admin_controller),
 ):
-    return await controller.get_me(current_user.id)
+    return await controller.get_me(current_user.id, current_user.tenant_id)
 
 
 @user_admin_router.put("/me", response_model=UserAdminResponse)
@@ -36,7 +36,7 @@ async def update_user_me(
     current_user: User = Depends(get_current_active_user),
     controller: UserAdminController = Depends(get_user_admin_controller),
 ):
-    return await controller.update_me(current_user.id, request)
+    return await controller.update_me(current_user.id, request, current_user.tenant_id)
 
 
 @user_admin_router.get("", response_model=UserAdminListResponse)
@@ -46,7 +46,8 @@ async def read_users(
     current_user: User = Depends(get_current_active_superuser),
     controller: UserAdminController = Depends(get_user_admin_controller),
 ):
-    return await controller.list(skip=skip, limit=limit)
+    # 仅返回本租户用户（superuser 也不豁免租户隔离）
+    return await controller.list(current_user.tenant_id, skip=skip, limit=limit)
 
 
 @user_admin_router.post("", response_model=UserAdminResponse, status_code=status.HTTP_201_CREATED)
@@ -55,10 +56,9 @@ async def create_user(
     current_user: User = Depends(get_current_active_superuser),
     controller: UserAdminController = Depends(get_user_admin_controller),
 ):
-    try:
-        return await controller.create(request)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    # 用户所属租户强制取当前租户（请求体不再接受 tenant_id）；
+    # 邮箱冲突（409）由全局领域异常 handler 映射
+    return await controller.create(request, current_user.tenant_id)
 
 
 @user_admin_router.get("/{user_id}", response_model=UserAdminResponse)
@@ -67,7 +67,7 @@ async def read_user(
     current_user: User = Depends(get_current_active_superuser),
     controller: UserAdminController = Depends(get_user_admin_controller),
 ):
-    return await controller.get_by_id(user_id)
+    return await controller.get_by_id(user_id, current_user.tenant_id)
 
 
 @user_admin_router.put("/{user_id}", response_model=UserAdminResponse)
@@ -77,7 +77,7 @@ async def update_user(
     current_user: User = Depends(get_current_active_superuser),
     controller: UserAdminController = Depends(get_user_admin_controller),
 ):
-    return await controller.update(user_id, request)
+    return await controller.update(user_id, request, current_user.tenant_id)
 
 
 @user_admin_router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -86,6 +86,6 @@ async def delete_user(
     current_user: User = Depends(get_current_active_superuser),
     controller: UserAdminController = Depends(get_user_admin_controller),
 ):
-    deleted = await controller.delete(user_id)
+    deleted = await controller.delete(user_id, current_user.tenant_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
